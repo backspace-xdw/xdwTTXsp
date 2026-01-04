@@ -1,137 +1,126 @@
 <template>
   <div class="ai-safe-page">
-    <!-- 顶部统计卡片 -->
-    <div class="stats-row">
-      <div class="stat-card" v-for="stat in statCards" :key="stat.key">
-        <div class="stat-icon" :style="{ background: stat.color }">
-          <el-icon :size="24"><component :is="stat.icon" /></el-icon>
+    <!-- 顶部风险等级统计卡片 -->
+    <div class="risk-stats-row">
+      <div class="risk-stat-card high">
+        <div class="stat-icon">
+          <el-icon><Van /></el-icon>
         </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stat.value }}</div>
-          <div class="stat-label">{{ stat.label }}</div>
+        <div class="stat-content">
+          <div class="stat-label">当前高风险车辆</div>
+          <div class="stat-value">{{ riskStats.highRisk }}</div>
+        </div>
+        <div class="stat-sub">
+          今日高风险车辆: <span>{{ riskStats.todayHighRisk }}</span>
+        </div>
+      </div>
+
+      <div class="risk-stat-card medium">
+        <div class="stat-icon">
+          <el-icon><Van /></el-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">当前中风险车辆</div>
+          <div class="stat-value">{{ riskStats.mediumRisk }}</div>
+        </div>
+        <div class="stat-sub">
+          今日中风险车辆: <span>{{ riskStats.todayMediumRisk }}</span>
+        </div>
+      </div>
+
+      <div class="risk-stat-card low">
+        <div class="stat-icon">
+          <el-icon><Van /></el-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">当前低风险车辆</div>
+          <div class="stat-value">{{ riskStats.lowRisk }}</div>
+        </div>
+        <div class="stat-sub">
+          今日低风险车辆: <span>{{ riskStats.todayLowRisk }}</span>
+        </div>
+      </div>
+
+      <div class="risk-stat-card online">
+        <div class="stat-icon">
+          <el-icon><Van /></el-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">主动安全在线车辆</div>
+          <div class="stat-value">{{ riskStats.online }}</div>
+        </div>
+        <div class="stat-sub">
+          主动安全车辆总数: <span>{{ riskStats.total }}</span>
         </div>
       </div>
     </div>
 
-    <!-- 筛选区域 -->
-    <div class="filter-section">
-      <el-form :inline="true" :model="filterForm" class="filter-form">
-        <el-form-item label="报警类型">
-          <el-select v-model="filterForm.alarmType" placeholder="全部类型" clearable style="width: 150px">
-            <el-option
-              v-for="type in alarmTypes"
-              :key="type.value"
-              :label="type.label"
-              :value="type.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="处理状态">
-          <el-select v-model="filterForm.status" placeholder="全部状态" clearable style="width: 120px">
-            <el-option label="待处理" value="pending" />
-            <el-option label="已处理" value="processed" />
-            <el-option label="已忽略" value="ignored" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="车牌号">
-          <el-input v-model="filterForm.plateNo" placeholder="请输入车牌号" clearable style="width: 140px" />
-        </el-form-item>
-        <el-form-item label="时间范围">
-          <el-date-picker
-            v-model="filterForm.dateRange"
-            type="datetimerange"
-            range-separator="至"
-            start-placeholder="开始时间"
-            end-placeholder="结束时间"
-            format="YYYY-MM-DD HH:mm"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            style="width: 360px"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
-            查询
-          </el-button>
-          <el-button @click="handleReset">
-            <el-icon><Refresh /></el-icon>
-            重置
-          </el-button>
-        </el-form-item>
-      </el-form>
+    <!-- 工具栏 -->
+    <div class="toolbar-section">
+      <div class="toolbar-left">
+        <el-input
+          v-model="searchKeyword"
+          placeholder="请输入模糊查询内容"
+          prefix-icon="Search"
+          clearable
+          style="width: 220px"
+        />
+      </div>
+      <div class="toolbar-right">
+        <el-button @click="handleBatchDelete" :disabled="selectedRows.length === 0">
+          批量删除
+        </el-button>
+        <el-button @click="showHistoryAlarms">
+          历史报警...
+        </el-button>
+        <el-button @click="toggleAlarmPopup">
+          报警弹窗...
+        </el-button>
+        <el-button @click="toggleAlarmSound">
+          报警声音...
+        </el-button>
+        <el-button :icon="Setting" circle @click="showSettings" />
+      </div>
     </div>
 
-    <!-- 报警列表 -->
+    <!-- 报警表格 -->
     <div class="alarm-table-section">
       <el-table
-        :data="alarmList"
+        :data="filteredAlarmList"
         v-loading="loading"
         style="width: 100%"
-        :row-class-name="getRowClassName"
-        @row-click="handleRowClick"
+        :header-cell-style="{ background: '#1e3c72', color: '#fff' }"
+        @selection-change="handleSelectionChange"
       >
-        <el-table-column type="index" label="序号" width="60" align="center" />
-        <el-table-column prop="alarmTime" label="报警时间" width="170" />
-        <el-table-column prop="plateNo" label="车牌号" width="110" />
-        <el-table-column prop="driverName" label="驾驶员" width="90" />
-        <el-table-column prop="alarmType" label="报警类型" width="130">
+        <el-table-column type="selection" width="50" />
+        <el-table-column prop="riskLevel" label="风险等级" width="100" align="center">
           <template #default="{ row }">
-            <el-tag :type="getAlarmTagType(row.alarmTypeCode)" size="small">
-              {{ row.alarmType }}
-            </el-tag>
+            <span :class="['risk-badge', `risk-${row.riskLevel}`]">
+              {{ getRiskLevelText(row.riskLevel) }}
+            </span>
           </template>
         </el-table-column>
-        <el-table-column prop="level" label="级别" width="80" align="center">
+        <el-table-column prop="plateNo" label="车牌号" width="120" />
+        <el-table-column prop="companyName" label="所属公司" width="120" />
+        <el-table-column prop="driverName" label="司机" width="100" />
+        <el-table-column prop="location" label="当前位置" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="latestAlarm" label="最新报警" width="150" />
+        <el-table-column prop="alarmCount" label="报警次数" width="90" align="center">
           <template #default="{ row }">
-            <span :class="['level-dot', `level-${row.level}`]"></span>
-            {{ getLevelText(row.level) }}
+            <span class="alarm-count">{{ row.alarmCount }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="speed" label="速度" width="80" align="center">
-          <template #default="{ row }">
-            {{ row.speed }} km/h
-          </template>
-        </el-table-column>
-        <el-table-column prop="location" label="位置" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="status" label="状态" width="90" align="center">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)" size="small">
-              {{ getStatusText(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="hasMedia" label="附件" width="80" align="center">
-          <template #default="{ row }">
-            <el-icon v-if="row.hasVideo" :size="18" color="#409eff" title="有视频">
-              <VideoCamera />
-            </el-icon>
-            <el-icon v-if="row.hasImage" :size="18" color="#67c23a" title="有图片" style="margin-left: 4px">
-              <Picture />
-            </el-icon>
-          </template>
-        </el-table-column>
+        <el-table-column prop="updateTime" label="更新时间" width="160" />
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click.stop="handleViewDetail(row)">
-              查看
+            <el-button type="primary" link size="small" @click="handleViewDetail(row)">
+              详情
             </el-button>
-            <el-button
-              v-if="row.status === 'pending'"
-              type="success"
-              link
-              size="small"
-              @click.stop="handleProcess(row)"
-            >
-              处理
+            <el-button type="success" link size="small" @click="handleTrack(row)">
+              跟踪
             </el-button>
-            <el-button
-              v-if="row.status === 'pending'"
-              type="info"
-              link
-              size="small"
-              @click.stop="handleIgnore(row)"
-            >
-              忽略
+            <el-button type="warning" link size="small" @click="handlePlayback(row)">
+              回放
             </el-button>
           </template>
         </el-table-column>
@@ -154,199 +143,126 @@
     <!-- 报警详情对话框 -->
     <el-dialog
       v-model="detailDialogVisible"
-      title="报警详情"
-      width="900px"
-      :close-on-click-modal="false"
+      :title="`${currentVehicle?.plateNo} - 报警详情`"
+      width="1000px"
+      destroy-on-close
     >
-      <div class="alarm-detail" v-if="currentAlarm">
-        <div class="detail-header">
-          <div class="alarm-type-badge" :style="{ background: getAlarmColor(currentAlarm.alarmTypeCode) }">
-            {{ currentAlarm.alarmType }}
+      <div class="detail-content" v-if="currentVehicle">
+        <div class="detail-left">
+          <!-- 车辆基本信息 -->
+          <div class="info-card">
+            <h4>车辆信息</h4>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="label">车牌号:</span>
+                <span class="value">{{ currentVehicle.plateNo }}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">司机:</span>
+                <span class="value">{{ currentVehicle.driverName }}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">所属公司:</span>
+                <span class="value">{{ currentVehicle.companyName }}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">风险等级:</span>
+                <span :class="['risk-badge', `risk-${currentVehicle.riskLevel}`]">
+                  {{ getRiskLevelText(currentVehicle.riskLevel) }}
+                </span>
+              </div>
+              <div class="info-item full">
+                <span class="label">当前位置:</span>
+                <span class="value">{{ currentVehicle.location }}</span>
+              </div>
+            </div>
           </div>
-          <div class="alarm-meta">
-            <span>{{ currentAlarm.plateNo }}</span>
-            <span class="separator">|</span>
-            <span>{{ currentAlarm.driverName }}</span>
-            <span class="separator">|</span>
-            <span>{{ currentAlarm.alarmTime }}</span>
+
+          <!-- 报警统计 -->
+          <div class="info-card">
+            <h4>今日报警统计</h4>
+            <div class="alarm-stats">
+              <div class="alarm-stat-item">
+                <div class="stat-num red">{{ vehicleAlarmStats.high }}</div>
+                <div class="stat-label">高级报警</div>
+              </div>
+              <div class="alarm-stat-item">
+                <div class="stat-num orange">{{ vehicleAlarmStats.medium }}</div>
+                <div class="stat-label">中级报警</div>
+              </div>
+              <div class="alarm-stat-item">
+                <div class="stat-num yellow">{{ vehicleAlarmStats.low }}</div>
+                <div class="stat-label">低级报警</div>
+              </div>
+              <div class="alarm-stat-item">
+                <div class="stat-num blue">{{ vehicleAlarmStats.total }}</div>
+                <div class="stat-label">总计</div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="detail-content">
-          <div class="detail-left">
-            <!-- 媒体区域 -->
-            <div class="media-section">
-              <div class="media-tabs">
-                <el-radio-group v-model="mediaTab" size="small">
-                  <el-radio-button label="image" v-if="currentAlarm.hasImage">图片</el-radio-button>
-                  <el-radio-button label="video" v-if="currentAlarm.hasVideo">视频</el-radio-button>
-                </el-radio-group>
-              </div>
-              <div class="media-content">
-                <div v-if="mediaTab === 'image'" class="image-viewer">
-                  <el-image
-                    :src="currentAlarm.imageUrl"
-                    fit="contain"
-                    :preview-src-list="[currentAlarm.imageUrl]"
-                  >
-                    <template #error>
-                      <div class="image-error">
-                        <el-icon :size="40"><Picture /></el-icon>
-                        <p>图片加载失败</p>
-                      </div>
-                    </template>
-                  </el-image>
-                </div>
-                <div v-else-if="mediaTab === 'video'" class="video-player">
-                  <video
-                    v-if="currentAlarm.videoUrl"
-                    :src="currentAlarm.videoUrl"
-                    controls
-                    style="width: 100%; height: 100%"
-                  >
-                    您的浏览器不支持视频播放
-                  </video>
-                  <div v-else class="video-placeholder">
-                    <el-icon :size="40"><VideoCamera /></el-icon>
-                    <p>暂无视频</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="detail-right">
-            <!-- 基本信息 -->
-            <div class="info-section">
-              <h4>基本信息</h4>
-              <div class="info-grid">
-                <div class="info-item">
-                  <span class="info-label">车牌号:</span>
-                  <span class="info-value">{{ currentAlarm.plateNo }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">驾驶员:</span>
-                  <span class="info-value">{{ currentAlarm.driverName || '-' }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">所属企业:</span>
-                  <span class="info-value">{{ currentAlarm.companyName }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">设备ID:</span>
-                  <span class="info-value">{{ currentAlarm.deviceId }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- 报警信息 -->
-            <div class="info-section">
-              <h4>报警信息</h4>
-              <div class="info-grid">
-                <div class="info-item">
-                  <span class="info-label">报警类型:</span>
-                  <span class="info-value">{{ currentAlarm.alarmType }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">报警级别:</span>
-                  <span class="info-value">
-                    <span :class="['level-dot', `level-${currentAlarm.level}`]"></span>
-                    {{ getLevelText(currentAlarm.level) }}
-                  </span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">报警时间:</span>
-                  <span class="info-value">{{ currentAlarm.alarmTime }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">当前速度:</span>
-                  <span class="info-value">{{ currentAlarm.speed }} km/h</span>
-                </div>
-                <div class="info-item full-width">
-                  <span class="info-label">报警位置:</span>
-                  <span class="info-value">{{ currentAlarm.location }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- 处理信息 -->
-            <div class="info-section" v-if="currentAlarm.status !== 'pending'">
-              <h4>处理信息</h4>
-              <div class="info-grid">
-                <div class="info-item">
-                  <span class="info-label">处理状态:</span>
-                  <span class="info-value">
-                    <el-tag :type="getStatusType(currentAlarm.status)" size="small">
-                      {{ getStatusText(currentAlarm.status) }}
-                    </el-tag>
-                  </span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">处理人:</span>
-                  <span class="info-value">{{ currentAlarm.processedBy || '-' }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">处理时间:</span>
-                  <span class="info-value">{{ currentAlarm.processedTime || '-' }}</span>
-                </div>
-                <div class="info-item full-width">
-                  <span class="info-label">处理备注:</span>
-                  <span class="info-value">{{ currentAlarm.processRemark || '-' }}</span>
-                </div>
-              </div>
-            </div>
+        <div class="detail-right">
+          <!-- 报警列表 -->
+          <div class="alarm-list-card">
+            <h4>报警记录</h4>
+            <el-table :data="vehicleAlarmList" max-height="400">
+              <el-table-column prop="alarmTime" label="时间" width="160" />
+              <el-table-column prop="alarmType" label="类型" width="120" />
+              <el-table-column prop="level" label="级别" width="80">
+                <template #default="{ row }">
+                  <el-tag :type="getAlarmLevelType(row.level)" size="small">
+                    {{ row.level }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="status" label="状态" width="80">
+                <template #default="{ row }">
+                  <el-tag :type="row.status === '已处理' ? 'success' : 'warning'" size="small">
+                    {{ row.status }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+            </el-table>
           </div>
         </div>
       </div>
 
       <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="detailDialogVisible = false">关闭</el-button>
-          <el-button
-            v-if="currentAlarm?.status === 'pending'"
-            type="warning"
-            @click="handleIgnore(currentAlarm)"
-          >
-            忽略
-          </el-button>
-          <el-button
-            v-if="currentAlarm?.status === 'pending'"
-            type="primary"
-            @click="handleProcess(currentAlarm)"
-          >
-            确认处理
-          </el-button>
-        </div>
+        <el-button @click="detailDialogVisible = false">关闭</el-button>
+        <el-button type="primary" @click="handleTrack(currentVehicle)">实时跟踪</el-button>
       </template>
     </el-dialog>
 
-    <!-- 处理对话框 -->
-    <el-dialog
-      v-model="processDialogVisible"
-      title="处理报警"
-      width="500px"
-    >
-      <el-form :model="processForm" label-width="80px">
-        <el-form-item label="处理结果">
-          <el-select v-model="processForm.result" placeholder="请选择处理结果" style="width: 100%">
-            <el-option label="确认报警" value="confirmed" />
-            <el-option label="误报" value="false_alarm" />
-            <el-option label="已通知驾驶员" value="notified" />
-            <el-option label="其他" value="other" />
-          </el-select>
+    <!-- 设置对话框 -->
+    <el-dialog v-model="settingsDialogVisible" title="安全监控设置" width="500px">
+      <el-form :model="settings" label-width="120px">
+        <el-form-item label="报警弹窗">
+          <el-switch v-model="settings.popupEnabled" />
         </el-form-item>
-        <el-form-item label="处理备注">
-          <el-input
-            v-model="processForm.remark"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入处理备注"
-          />
+        <el-form-item label="报警声音">
+          <el-switch v-model="settings.soundEnabled" />
+        </el-form-item>
+        <el-form-item label="高风险阈值">
+          <el-input-number v-model="settings.highRiskThreshold" :min="1" :max="100" />
+          <span class="form-tip">次/天</span>
+        </el-form-item>
+        <el-form-item label="中风险阈值">
+          <el-input-number v-model="settings.mediumRiskThreshold" :min="1" :max="100" />
+          <span class="form-tip">次/天</span>
+        </el-form-item>
+        <el-form-item label="自动刷新">
+          <el-select v-model="settings.refreshInterval">
+            <el-option label="不刷新" :value="0" />
+            <el-option label="30秒" :value="30" />
+            <el-option label="1分钟" :value="60" />
+            <el-option label="5分钟" :value="300" />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="processDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmProcess">确认</el-button>
+        <el-button @click="settingsDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveSettings">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -354,40 +270,28 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import {
-  Search,
-  Refresh,
-  VideoCamera,
-  Picture,
-  Warning,
-  Bell,
-  CircleCheck,
-  Clock
-} from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import axios from 'axios'
+import { Van, Setting, Search } from '@element-plus/icons-vue'
 
-// 报警类型定义
-const alarmTypes = [
-  { value: 'fatigue', label: '疲劳驾驶', color: '#f56c6c' },
-  { value: 'phone', label: '接打电话', color: '#e6a23c' },
-  { value: 'smoke', label: '抽烟', color: '#e6a23c' },
-  { value: 'distraction', label: '分神驾驶', color: '#e6a23c' },
-  { value: 'lane_departure', label: '车道偏离', color: '#f56c6c' },
-  { value: 'forward_collision', label: '前车碰撞预警', color: '#f56c6c' },
-  { value: 'pedestrian', label: '行人碰撞预警', color: '#f56c6c' },
-  { value: 'speed', label: '超速报警', color: '#e6a23c' },
-  { value: 'no_face', label: '未检测到人脸', color: '#909399' },
-  { value: 'camera_blocked', label: '摄像头遮挡', color: '#909399' }
-]
+const router = useRouter()
 
-// 筛选表单
-const filterForm = reactive({
-  alarmType: '',
-  status: '',
-  plateNo: '',
-  dateRange: [] as string[]
+// 风险统计数据
+const riskStats = ref({
+  highRisk: 1,
+  mediumRisk: 0,
+  lowRisk: 11,
+  online: 0,
+  todayHighRisk: 5,
+  todayMediumRisk: 18,
+  todayLowRisk: 42,
+  total: 10
 })
+
+// 搜索和筛选
+const searchKeyword = ref('')
+const loading = ref(false)
+const selectedRows = ref<any[]>([])
 
 // 分页
 const pagination = reactive({
@@ -396,302 +300,185 @@ const pagination = reactive({
   total: 0
 })
 
-// 状态
-const loading = ref(false)
-const alarmList = ref<any[]>([])
+// 弹窗状态
 const detailDialogVisible = ref(false)
-const processDialogVisible = ref(false)
-const currentAlarm = ref<any>(null)
-const mediaTab = ref('image')
+const settingsDialogVisible = ref(false)
+const currentVehicle = ref<any>(null)
 
-// 处理表单
-const processForm = reactive({
-  result: '',
-  remark: ''
+// 设置
+const settings = reactive({
+  popupEnabled: true,
+  soundEnabled: false,
+  highRiskThreshold: 10,
+  mediumRiskThreshold: 5,
+  refreshInterval: 60
 })
 
-// 统计数据
-const statCards = computed(() => [
-  {
-    key: 'total',
-    label: '今日报警',
-    value: alarmList.value.length,
-    icon: Bell,
-    color: '#409eff'
-  },
-  {
-    key: 'pending',
-    label: '待处理',
-    value: alarmList.value.filter(a => a.status === 'pending').length,
-    icon: Clock,
-    color: '#e6a23c'
-  },
-  {
-    key: 'processed',
-    label: '已处理',
-    value: alarmList.value.filter(a => a.status === 'processed').length,
-    icon: CircleCheck,
-    color: '#67c23a'
-  },
-  {
-    key: 'high',
-    label: '高危报警',
-    value: alarmList.value.filter(a => a.level === 'high').length,
-    icon: Warning,
-    color: '#f56c6c'
-  }
+// 车辆报警统计
+const vehicleAlarmStats = ref({
+  high: 3,
+  medium: 5,
+  low: 12,
+  total: 20
+})
+
+// 车辆报警列表
+const vehicleAlarmList = ref([
+  { alarmTime: '2024-01-03 18:23:45', alarmType: '车道偏离报警1级', level: '高级', status: '待处理' },
+  { alarmTime: '2024-01-03 17:45:12', alarmType: '前车碰撞预警', level: '高级', status: '已处理' },
+  { alarmTime: '2024-01-03 16:30:00', alarmType: '疲劳驾驶预警', level: '中级', status: '待处理' },
+  { alarmTime: '2024-01-03 15:20:33', alarmType: '抽烟报警', level: '低级', status: '已处理' },
+  { alarmTime: '2024-01-03 14:10:22', alarmType: '接打电话', level: '中级', status: '已处理' }
 ])
 
-// 获取报警标签类型
-function getAlarmTagType(code: string) {
-  const dangerTypes = ['fatigue', 'lane_departure', 'forward_collision', 'pedestrian']
-  const warnTypes = ['phone', 'smoke', 'distraction', 'speed']
-  if (dangerTypes.includes(code)) return 'danger'
-  if (warnTypes.includes(code)) return 'warning'
-  return 'info'
-}
+// 报警列表数据
+const alarmList = ref<any[]>([])
 
-// 获取报警颜色
-function getAlarmColor(code: string) {
-  const type = alarmTypes.find(t => t.value === code)
-  return type?.color || '#909399'
-}
+// 过滤后的列表
+const filteredAlarmList = computed(() => {
+  if (!searchKeyword.value) return alarmList.value
+  const keyword = searchKeyword.value.toLowerCase()
+  return alarmList.value.filter(item =>
+    item.plateNo.toLowerCase().includes(keyword) ||
+    item.driverName.toLowerCase().includes(keyword) ||
+    item.companyName.toLowerCase().includes(keyword)
+  )
+})
 
-// 获取级别文本
-function getLevelText(level: string) {
+// 获取风险等级文本
+const getRiskLevelText = (level: string) => {
   const map: Record<string, string> = {
-    high: '高',
-    medium: '中',
-    low: '低'
+    high: '高风险',
+    medium: '中风险',
+    low: '低风险'
   }
   return map[level] || level
 }
 
-// 获取状态类型
-function getStatusType(status: string) {
+// 获取报警级别类型
+const getAlarmLevelType = (level: string) => {
   const map: Record<string, string> = {
-    pending: 'warning',
-    processed: 'success',
-    ignored: 'info'
+    '高级': 'danger',
+    '中级': 'warning',
+    '低级': 'info'
   }
-  return map[status] || 'info'
-}
-
-// 获取状态文本
-function getStatusText(status: string) {
-  const map: Record<string, string> = {
-    pending: '待处理',
-    processed: '已处理',
-    ignored: '已忽略'
-  }
-  return map[status] || status
-}
-
-// 获取行样式
-function getRowClassName({ row }: { row: any }) {
-  if (row.level === 'high' && row.status === 'pending') {
-    return 'high-level-row'
-  }
-  return ''
-}
-
-// 加载报警列表
-async function loadAlarms() {
-  loading.value = true
-  try {
-    const params: any = {
-      page: pagination.page,
-      pageSize: pagination.pageSize
-    }
-    if (filterForm.alarmType) params.alarmType = filterForm.alarmType
-    if (filterForm.status) params.status = filterForm.status
-    if (filterForm.plateNo) params.plateNo = filterForm.plateNo
-    if (filterForm.dateRange?.length === 2) {
-      params.startTime = filterForm.dateRange[0]
-      params.endTime = filterForm.dateRange[1]
-    }
-
-    const res = await axios.get('/api/alarms', { params })
-    if (res.data.code === 0) {
-      alarmList.value = res.data.data.list
-      pagination.total = res.data.data.total
-    }
-  } catch (error) {
-    console.error('加载报警列表失败:', error)
-    // 使用模拟数据
-    generateMockData()
-  } finally {
-    loading.value = false
-  }
+  return map[level] || 'info'
 }
 
 // 生成模拟数据
-function generateMockData() {
-  const now = new Date()
+const generateMockData = () => {
   const mockData: any[] = []
+  const companies = ['金旅', '本安测试部', '山东四通', '广州分公司']
+  const drivers = ['未知司机', '张三', '李四', '王五', '赵六']
+  const alarmTypes = ['车道偏离报警1级', '前车碰撞预警', '疲劳驾驶', '接打电话', '抽烟']
+  const riskLevels = ['high', 'medium', 'low']
 
-  const vehicles = [
-    { plateNo: '沪A12345', driverName: '张三', companyName: '金旅', deviceId: 'DEV001' },
-    { plateNo: '沪B67890', driverName: '李四', companyName: '金旅', deviceId: 'DEV002' },
-    { plateNo: '沪C11111', driverName: '王五', companyName: '金旅', deviceId: 'DEV003' },
-    { plateNo: '京A11111', driverName: '赵六', companyName: '本安测试部', deviceId: 'DEV004' }
-  ]
-
-  const locations = [
-    '上海市浦东新区张江高科技园区',
-    '上海市浦东新区陆家嘴金融中心',
-    '上海市浦东新区世纪大道',
-    '上海市黄浦区南京东路',
-    '北京市朝阳区CBD商务区',
-    '北京市海淀区中关村'
-  ]
-
-  for (let i = 0; i < 50; i++) {
-    const vehicle = vehicles[Math.floor(Math.random() * vehicles.length)]
-    const alarmType = alarmTypes[Math.floor(Math.random() * alarmTypes.length)]
-    const time = new Date(now.getTime() - Math.random() * 24 * 60 * 60 * 1000)
-    const levels = ['high', 'medium', 'low']
-    const statuses = ['pending', 'pending', 'pending', 'processed', 'ignored']
-
+  for (let i = 0; i < 30; i++) {
+    const riskLevel = riskLevels[Math.floor(Math.random() * riskLevels.length)]
     mockData.push({
       id: i + 1,
-      ...vehicle,
-      alarmType: alarmType.label,
-      alarmTypeCode: alarmType.value,
-      alarmTime: formatDateTime(time),
-      level: levels[Math.floor(Math.random() * levels.length)],
-      speed: Math.floor(Math.random() * 80) + 20,
-      location: locations[Math.floor(Math.random() * locations.length)],
-      status: statuses[Math.floor(Math.random() * statuses.length)],
-      hasVideo: Math.random() > 0.3,
-      hasImage: Math.random() > 0.2,
-      imageUrl: 'https://via.placeholder.com/640x480?text=Alarm+Image',
-      videoUrl: '',
-      processedBy: null,
-      processedTime: null,
-      processRemark: null
+      plateNo: `391${1400 + i}`,
+      companyName: companies[Math.floor(Math.random() * companies.length)],
+      driverName: drivers[Math.floor(Math.random() * drivers.length)],
+      riskLevel,
+      location: `${(23.1 + Math.random() * 0.1).toFixed(6)},${(113.3 + Math.random() * 0.1).toFixed(6)}`,
+      latestAlarm: alarmTypes[Math.floor(Math.random() * alarmTypes.length)],
+      alarmCount: Math.floor(Math.random() * 20) + 1,
+      updateTime: `2024-01-03 ${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}:00`
     })
   }
 
-  // 按时间排序
-  mockData.sort((a, b) => new Date(b.alarmTime).getTime() - new Date(a.alarmTime).getTime())
+  // 按风险等级排序
+  mockData.sort((a, b) => {
+    const order: Record<string, number> = { high: 0, medium: 1, low: 2 }
+    return order[a.riskLevel] - order[b.riskLevel]
+  })
 
   alarmList.value = mockData
   pagination.total = mockData.length
+
+  // 更新统计
+  riskStats.value.highRisk = mockData.filter(v => v.riskLevel === 'high').length
+  riskStats.value.mediumRisk = mockData.filter(v => v.riskLevel === 'medium').length
+  riskStats.value.lowRisk = mockData.filter(v => v.riskLevel === 'low').length
 }
 
-// 格式化日期时间
-function formatDateTime(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  const h = String(date.getHours()).padStart(2, '0')
-  const min = String(date.getMinutes()).padStart(2, '0')
-  const s = String(date.getSeconds()).padStart(2, '0')
-  return `${y}-${m}-${d} ${h}:${min}:${s}`
+// 处理选择变化
+const handleSelectionChange = (rows: any[]) => {
+  selectedRows.value = rows
 }
 
-// 查询
-function handleSearch() {
-  pagination.page = 1
-  loadAlarms()
-}
-
-// 重置
-function handleReset() {
-  filterForm.alarmType = ''
-  filterForm.status = ''
-  filterForm.plateNo = ''
-  filterForm.dateRange = []
-  pagination.page = 1
-  loadAlarms()
-}
-
-// 分页改变
-function handleSizeChange() {
-  pagination.page = 1
-  loadAlarms()
-}
-
-function handlePageChange() {
-  loadAlarms()
-}
-
-// 行点击
-function handleRowClick(row: any) {
-  handleViewDetail(row)
-}
-
-// 查看详情
-function handleViewDetail(row: any) {
-  currentAlarm.value = row
-  mediaTab.value = row.hasImage ? 'image' : 'video'
-  detailDialogVisible.value = true
-}
-
-// 处理报警
-function handleProcess(row: any) {
-  currentAlarm.value = row
-  processForm.result = ''
-  processForm.remark = ''
-  processDialogVisible.value = true
-}
-
-// 确认处理
-async function confirmProcess() {
-  if (!processForm.result) {
-    ElMessage.warning('请选择处理结果')
-    return
-  }
-
-  try {
-    // 调用API处理报警
-    // await axios.post(`/api/alarms/${currentAlarm.value.id}/process`, processForm)
-
-    // 模拟处理
-    const alarm = alarmList.value.find(a => a.id === currentAlarm.value.id)
-    if (alarm) {
-      alarm.status = 'processed'
-      alarm.processedBy = 'admin'
-      alarm.processedTime = formatDateTime(new Date())
-      alarm.processRemark = processForm.remark
-    }
-
-    ElMessage.success('处理成功')
-    processDialogVisible.value = false
-    detailDialogVisible.value = false
-  } catch (error) {
-    ElMessage.error('处理失败')
-  }
-}
-
-// 忽略报警
-function handleIgnore(row: any) {
-  ElMessageBox.confirm('确定要忽略此报警吗？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
+// 批量删除
+const handleBatchDelete = () => {
+  ElMessageBox.confirm(`确定要删除选中的 ${selectedRows.value.length} 条记录吗？`, '提示', {
     type: 'warning'
-  }).then(async () => {
-    try {
-      // await axios.post(`/api/alarms/${row.id}/ignore`)
-
-      const alarm = alarmList.value.find(a => a.id === row.id)
-      if (alarm) {
-        alarm.status = 'ignored'
-        alarm.processedBy = 'admin'
-        alarm.processedTime = formatDateTime(new Date())
-      }
-
-      ElMessage.success('已忽略')
-      detailDialogVisible.value = false
-    } catch (error) {
-      ElMessage.error('操作失败')
-    }
+  }).then(() => {
+    ElMessage.success('删除成功')
+    selectedRows.value = []
   }).catch(() => {})
 }
 
+// 历史报警
+const showHistoryAlarms = () => {
+  ElMessage.info('打开历史报警')
+}
+
+// 报警弹窗设置
+const toggleAlarmPopup = () => {
+  settings.popupEnabled = !settings.popupEnabled
+  ElMessage.success(`报警弹窗已${settings.popupEnabled ? '开启' : '关闭'}`)
+}
+
+// 报警声音设置
+const toggleAlarmSound = () => {
+  settings.soundEnabled = !settings.soundEnabled
+  ElMessage.success(`报警声音已${settings.soundEnabled ? '开启' : '关闭'}`)
+}
+
+// 打开设置
+const showSettings = () => {
+  settingsDialogVisible.value = true
+}
+
+// 保存设置
+const saveSettings = () => {
+  ElMessage.success('设置已保存')
+  settingsDialogVisible.value = false
+}
+
+// 查看详情
+const handleViewDetail = (row: any) => {
+  currentVehicle.value = row
+  detailDialogVisible.value = true
+}
+
+// 跟踪车辆
+const handleTrack = (row: any) => {
+  router.push({
+    path: '/monitor',
+    query: { vehicleId: row.id, track: 'true' }
+  })
+}
+
+// 回放
+const handlePlayback = (row: any) => {
+  router.push({
+    path: '/replay',
+    query: { vehicleId: row.id }
+  })
+}
+
+// 分页
+const handleSizeChange = () => {
+  pagination.page = 1
+}
+
+const handlePageChange = () => {
+  // 加载数据
+}
+
 onMounted(() => {
-  loadAlarms()
+  generateMockData()
 })
 </script>
 
@@ -700,66 +487,145 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #f5f7fa;
+  background: #1a1a2e;
   padding: 16px;
   overflow: auto;
 }
 
-// 统计卡片
-.stats-row {
+// 风险统计卡片
+.risk-stats-row {
   display: flex;
   gap: 16px;
   margin-bottom: 16px;
 
-  .stat-card {
+  .risk-stat-card {
     flex: 1;
-    display: flex;
-    align-items: center;
-    padding: 20px;
-    background: #fff;
+    background: linear-gradient(135deg, #2d3a4f 0%, #1e2a3a 100%);
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
 
     .stat-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
       width: 56px;
       height: 56px;
-      border-radius: 12px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
+      font-size: 28px;
       color: #fff;
-      margin-right: 16px;
     }
 
-    .stat-info {
-      .stat-value {
-        font-size: 28px;
-        font-weight: 600;
-        color: #303133;
-        line-height: 1.2;
-      }
+    .stat-content {
+      margin-left: 72px;
 
       .stat-label {
-        font-size: 14px;
-        color: #909399;
-        margin-top: 4px;
+        font-size: 13px;
+        color: #94a3b8;
+        margin-bottom: 4px;
+      }
+
+      .stat-value {
+        font-size: 36px;
+        font-weight: 600;
+        color: #fff;
+      }
+    }
+
+    .stat-sub {
+      margin-left: 72px;
+      margin-top: 8px;
+      font-size: 12px;
+      color: #64748b;
+
+      span {
+        color: #94a3b8;
+      }
+    }
+
+    &.high {
+      .stat-icon {
+        background: #ef4444;
+      }
+      .stat-value {
+        color: #ef4444;
+      }
+    }
+
+    &.medium {
+      .stat-icon {
+        background: #f97316;
+      }
+      .stat-value {
+        color: #f97316;
+      }
+    }
+
+    &.low {
+      .stat-icon {
+        background: #eab308;
+      }
+      .stat-value {
+        color: #eab308;
+      }
+    }
+
+    &.online {
+      .stat-icon {
+        background: #3b82f6;
+      }
+      .stat-value {
+        color: #3b82f6;
       }
     }
   }
 }
 
-// 筛选区域
-.filter-section {
-  background: #fff;
-  padding: 16px 20px;
+// 工具栏
+.toolbar-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #2d3a4f;
   border-radius: 8px;
   margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 
-  .filter-form {
-    :deep(.el-form-item) {
-      margin-bottom: 0;
-      margin-right: 16px;
+  .toolbar-left,
+  .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  :deep(.el-input) {
+    .el-input__wrapper {
+      background: #1e2a3a;
+      border-color: #3d4a5f;
+      box-shadow: none;
+    }
+
+    .el-input__inner {
+      color: #fff;
+
+      &::placeholder {
+        color: #64748b;
+      }
+    }
+  }
+
+  :deep(.el-button) {
+    background: #3d4a5f;
+    border-color: #4d5a6f;
+    color: #fff;
+
+    &:hover {
+      background: #4d5a6f;
     }
   }
 }
@@ -767,49 +633,72 @@ onMounted(() => {
 // 报警表格
 .alarm-table-section {
   flex: 1;
-  background: #fff;
+  background: #2d3a4f;
   border-radius: 8px;
   padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
 
   :deep(.el-table) {
-    flex: 1;
+    background: transparent;
+    --el-table-bg-color: transparent;
+    --el-table-tr-bg-color: transparent;
+    --el-table-header-bg-color: #1e3c72;
+    --el-table-row-hover-bg-color: rgba(64, 158, 255, 0.1);
+    --el-table-border-color: #3d4a5f;
+    --el-table-text-color: #e2e8f0;
 
-    .high-level-row {
-      background-color: #fef0f0;
+    .el-table__header-wrapper {
+      th {
+        background: #1e3c72 !important;
+        color: #fff !important;
+        font-weight: 500;
+      }
     }
 
-    .el-table__row {
-      cursor: pointer;
-
-      &:hover {
-        background-color: #f5f7fa;
+    .el-table__body-wrapper {
+      .el-table__row {
+        &:hover > td {
+          background: rgba(64, 158, 255, 0.1) !important;
+        }
       }
+    }
+
+    .el-checkbox__inner {
+      background: #3d4a5f;
+      border-color: #4d5a6f;
     }
   }
 }
 
-// 级别点
-.level-dot {
+// 风险等级标签
+.risk-badge {
   display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 4px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
 
-  &.level-high {
-    background: #f56c6c;
+  &.risk-high {
+    background: #ef4444;
+    color: #fff;
   }
 
-  &.level-medium {
-    background: #e6a23c;
+  &.risk-medium {
+    background: #f97316;
+    color: #fff;
   }
 
-  &.level-low {
-    background: #67c23a;
+  &.risk-low {
+    background: #eab308;
+    color: #1a1a2e;
   }
+}
+
+// 报警次数
+.alarm-count {
+  color: #f56c6c;
+  font-weight: 600;
 }
 
 // 分页
@@ -817,101 +706,38 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   padding-top: 16px;
-  border-top: 1px solid #ebeef5;
-  margin-top: 16px;
-}
+  margin-top: auto;
 
-// 报警详情
-.alarm-detail {
-  .detail-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid #ebeef5;
-
-    .alarm-type-badge {
-      padding: 6px 16px;
-      border-radius: 4px;
-      color: #fff;
-      font-weight: 500;
-      margin-right: 16px;
-    }
-
-    .alarm-meta {
-      color: #606266;
-      font-size: 14px;
-
-      .separator {
-        margin: 0 8px;
-        color: #dcdfe6;
-      }
-    }
-  }
-
-  .detail-content {
-    display: flex;
-    gap: 24px;
-
-    .detail-left {
-      flex: 1;
-      min-width: 400px;
-    }
-
-    .detail-right {
-      flex: 1;
-    }
+  :deep(.el-pagination) {
+    --el-pagination-bg-color: #3d4a5f;
+    --el-pagination-text-color: #e2e8f0;
+    --el-pagination-button-color: #e2e8f0;
+    --el-pagination-button-bg-color: #3d4a5f;
+    --el-pagination-button-disabled-color: #64748b;
+    --el-pagination-button-disabled-bg-color: #2d3a4f;
+    --el-pagination-hover-color: #409eff;
   }
 }
 
-// 媒体区域
-.media-section {
-  .media-tabs {
-    margin-bottom: 12px;
-  }
+// 详情弹窗
+.detail-content {
+  display: flex;
+  gap: 24px;
 
-  .media-content {
-    height: 300px;
-    background: #f5f7fa;
-    border-radius: 8px;
-    overflow: hidden;
-
-    .image-viewer {
-      height: 100%;
-
-      :deep(.el-image) {
-        width: 100%;
-        height: 100%;
-      }
-    }
-
-    .image-error,
-    .video-placeholder {
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: #909399;
-
-      p {
-        margin-top: 8px;
-      }
-    }
-
-    .video-player {
-      height: 100%;
-      background: #000;
-    }
+  .detail-left,
+  .detail-right {
+    flex: 1;
   }
 }
 
-// 信息区域
-.info-section {
-  margin-bottom: 20px;
+.info-card {
+  background: #f5f7fa;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
 
   h4 {
-    margin: 0 0 12px 0;
+    margin: 0 0 12px;
     font-size: 14px;
     font-weight: 500;
     color: #303133;
@@ -928,26 +754,69 @@ onMounted(() => {
       display: flex;
       font-size: 13px;
 
-      &.full-width {
+      &.full {
         grid-column: span 2;
       }
 
-      .info-label {
+      .label {
         color: #909399;
         min-width: 70px;
       }
 
-      .info-value {
+      .value {
         color: #303133;
-        flex: 1;
       }
     }
   }
 }
 
-.dialog-footer {
+.alarm-stats {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
+  gap: 16px;
+
+  .alarm-stat-item {
+    flex: 1;
+    text-align: center;
+    padding: 12px;
+    background: #fff;
+    border-radius: 8px;
+
+    .stat-num {
+      font-size: 28px;
+      font-weight: 600;
+
+      &.red { color: #ef4444; }
+      &.orange { color: #f97316; }
+      &.yellow { color: #eab308; }
+      &.blue { color: #3b82f6; }
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #909399;
+      margin-top: 4px;
+    }
+  }
+}
+
+.alarm-list-card {
+  background: #f5f7fa;
+  border-radius: 8px;
+  padding: 16px;
+
+  h4 {
+    margin: 0 0 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #303133;
+    padding-left: 8px;
+    border-left: 3px solid #409eff;
+  }
+}
+
+.form-tip {
+  margin-left: 8px;
+  color: #909399;
+  font-size: 13px;
 }
 </style>

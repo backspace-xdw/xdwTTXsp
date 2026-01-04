@@ -368,8 +368,171 @@
               <el-table-column prop="address" label="位置" min-width="200" />
             </el-table>
           </el-tab-pane>
-          <el-tab-pane label="媒体文件" name="media" />
-          <el-tab-pane label="系统" name="system" />
+          <el-tab-pane label="媒体文件" name="media">
+            <div class="media-panel">
+              <!-- 媒体文件筛选工具栏 -->
+              <div class="media-toolbar">
+                <div class="toolbar-filters">
+                  <el-select v-model="mediaFilters.type" placeholder="文件类型" size="small" style="width: 100px">
+                    <el-option label="全部" value="" />
+                    <el-option label="视频" value="video" />
+                    <el-option label="图片" value="image" />
+                    <el-option label="音频" value="audio" />
+                  </el-select>
+                  <el-select v-model="mediaFilters.source" placeholder="来源" size="small" style="width: 100px">
+                    <el-option label="全部来源" value="" />
+                    <el-option label="报警抓拍" value="alarm" />
+                    <el-option label="手动抓拍" value="manual" />
+                    <el-option label="定时抓拍" value="scheduled" />
+                  </el-select>
+                  <el-date-picker
+                    v-model="mediaFilters.dateRange"
+                    type="daterange"
+                    range-separator="-"
+                    start-placeholder="开始日期"
+                    end-placeholder="结束日期"
+                    size="small"
+                    style="width: 220px"
+                  />
+                  <el-input
+                    v-model="mediaFilters.plateNo"
+                    placeholder="车牌号"
+                    size="small"
+                    style="width: 120px"
+                    clearable
+                  />
+                  <el-button type="primary" size="small" :icon="Search">查询</el-button>
+                </div>
+                <div class="toolbar-actions">
+                  <el-button size="small" :icon="Download">批量下载</el-button>
+                  <el-button size="small" :icon="Delete" type="danger">批量删除</el-button>
+                </div>
+              </div>
+              <!-- 媒体文件表格 -->
+              <el-table :data="mediaTableData" size="small" height="160" border stripe>
+                <el-table-column type="selection" width="40" />
+                <el-table-column label="预览" width="80">
+                  <template #default="{ row }">
+                    <div class="media-preview" @click="handleMediaPreview(row)">
+                      <el-icon v-if="row.type === 'video'" class="preview-icon video"><VideoCamera /></el-icon>
+                      <el-icon v-else-if="row.type === 'image'" class="preview-icon image"><Picture /></el-icon>
+                      <el-icon v-else class="preview-icon audio"><Microphone /></el-icon>
+                    </div>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="fileName" label="文件名" min-width="180" show-overflow-tooltip />
+                <el-table-column prop="plateNo" label="车牌号" width="100" />
+                <el-table-column prop="channel" label="通道" width="70" />
+                <el-table-column prop="source" label="来源" width="90">
+                  <template #default="{ row }">
+                    <el-tag :type="getMediaSourceType(row.source)" size="small">
+                      {{ row.source }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="size" label="大小" width="80" />
+                <el-table-column prop="duration" label="时长" width="70" />
+                <el-table-column prop="createTime" label="创建时间" width="150" />
+                <el-table-column label="操作" width="150" fixed="right">
+                  <template #default="{ row }">
+                    <el-button type="primary" link size="small" @click="handleMediaPreview(row)">预览</el-button>
+                    <el-button type="success" link size="small" @click="handleMediaDownload(row)">下载</el-button>
+                    <el-button type="danger" link size="small" @click="handleMediaDelete(row)">删除</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </el-tab-pane>
+          <el-tab-pane label="系统" name="system">
+            <div class="system-panel">
+              <!-- 系统信息工具栏 -->
+              <div class="system-toolbar">
+                <div class="toolbar-filters">
+                  <el-select v-model="systemFilters.type" placeholder="消息类型" size="small" style="width: 100px">
+                    <el-option label="全部" value="" />
+                    <el-option label="设备状态" value="device" />
+                    <el-option label="通信状态" value="comm" />
+                    <el-option label="系统日志" value="log" />
+                  </el-select>
+                  <el-select v-model="systemFilters.level" placeholder="级别" size="small" style="width: 100px">
+                    <el-option label="全部级别" value="" />
+                    <el-option label="正常" value="info" />
+                    <el-option label="警告" value="warning" />
+                    <el-option label="错误" value="error" />
+                  </el-select>
+                  <el-input
+                    v-model="systemFilters.keyword"
+                    placeholder="关键词搜索"
+                    size="small"
+                    style="width: 150px"
+                    clearable
+                    :prefix-icon="Search"
+                  />
+                </div>
+                <div class="toolbar-actions">
+                  <el-button size="small" :icon="Refresh" @click="refreshSystemData">刷新</el-button>
+                  <el-button size="small" :icon="Download">导出日志</el-button>
+                </div>
+              </div>
+              <!-- 系统状态概览 -->
+              <div class="system-stats">
+                <div class="stat-card online">
+                  <div class="stat-icon"><el-icon><Connection /></el-icon></div>
+                  <div class="stat-info">
+                    <div class="stat-value">{{ systemStats.onlineDevices }}</div>
+                    <div class="stat-label">在线设备</div>
+                  </div>
+                </div>
+                <div class="stat-card offline">
+                  <div class="stat-icon"><el-icon><CircleClose /></el-icon></div>
+                  <div class="stat-info">
+                    <div class="stat-value">{{ systemStats.offlineDevices }}</div>
+                    <div class="stat-label">离线设备</div>
+                  </div>
+                </div>
+                <div class="stat-card warning">
+                  <div class="stat-icon"><el-icon><Warning /></el-icon></div>
+                  <div class="stat-info">
+                    <div class="stat-value">{{ systemStats.warnings }}</div>
+                    <div class="stat-label">警告数</div>
+                  </div>
+                </div>
+                <div class="stat-card error">
+                  <div class="stat-icon"><el-icon><CircleCloseFilled /></el-icon></div>
+                  <div class="stat-info">
+                    <div class="stat-value">{{ systemStats.errors }}</div>
+                    <div class="stat-label">错误数</div>
+                  </div>
+                </div>
+              </div>
+              <!-- 系统消息表格 -->
+              <el-table :data="systemTableData" size="small" height="100" border stripe>
+                <el-table-column prop="time" label="时间" width="150" />
+                <el-table-column prop="type" label="类型" width="90">
+                  <template #default="{ row }">
+                    <el-tag :type="getSystemTypeTag(row.type)" size="small">{{ row.type }}</el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="level" label="级别" width="80">
+                  <template #default="{ row }">
+                    <span :class="['level-badge', row.level]">
+                      <el-icon v-if="row.level === 'error'"><CircleCloseFilled /></el-icon>
+                      <el-icon v-else-if="row.level === 'warning'"><Warning /></el-icon>
+                      <el-icon v-else><SuccessFilled /></el-icon>
+                      {{ getLevelText(row.level) }}
+                    </span>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="device" label="设备/车辆" width="120" />
+                <el-table-column prop="message" label="消息内容" min-width="250" show-overflow-tooltip />
+                <el-table-column label="操作" width="80" fixed="right">
+                  <template #default="{ row }">
+                    <el-button type="primary" link size="small" @click="handleSystemDetail(row)">详情</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </el-tab-pane>
         </el-tabs>
       </div>
     </div>
@@ -378,6 +541,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   Search,
   Setting,
@@ -402,12 +566,20 @@ import {
   VideoPause,
   VideoPlay,
   Plus,
-  Close
+  Close,
+  Delete,
+  Refresh,
+  Warning,
+  CircleClose,
+  CircleCloseFilled,
+  SuccessFilled
 } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import AMapLoader from '@amap/amap-jsapi-loader'
 import { useVehicleStore } from '@/stores/vehicle'
 import type { VehicleTreeNode } from '@/types'
 
+const router = useRouter()
 const vehicleStore = useVehicleStore()
 
 // 侧边栏状态
@@ -838,6 +1010,104 @@ const gpsTableData = computed(() => {
   }))
 })
 
+// ============ 媒体文件模块 ============
+const mediaFilters = ref({
+  type: '',
+  source: '',
+  dateRange: null as any,
+  plateNo: ''
+})
+
+// 媒体文件表格数据
+const mediaTableData = ref([
+  { id: 1, type: 'video', fileName: 'CH1_20240103_180000.mp4', plateNo: '沪A12345', channel: 'CH1', source: '报警抓拍', size: '25.6MB', duration: '00:30', createTime: '2024-01-03 18:00:00' },
+  { id: 2, type: 'image', fileName: 'CH2_20240103_175530.jpg', plateNo: '沪A12345', channel: 'CH2', source: '手动抓拍', size: '512KB', duration: '-', createTime: '2024-01-03 17:55:30' },
+  { id: 3, type: 'video', fileName: 'CH1_20240103_173000.mp4', plateNo: '沪B67890', channel: 'CH1', source: '定时抓拍', size: '18.2MB', duration: '00:20', createTime: '2024-01-03 17:30:00' },
+  { id: 4, type: 'image', fileName: 'CH3_20240103_165000.jpg', plateNo: '京A11111', channel: 'CH3', source: '报警抓拍', size: '480KB', duration: '-', createTime: '2024-01-03 16:50:00' },
+  { id: 5, type: 'audio', fileName: 'CH1_20240103_160000.wav', plateNo: '沪C11111', channel: 'CH1', source: '手动抓拍', size: '2.1MB', duration: '00:45', createTime: '2024-01-03 16:00:00' },
+  { id: 6, type: 'video', fileName: 'CH2_20240103_150000.mp4', plateNo: '粤A22222', channel: 'CH2', source: '报警抓拍', size: '32.5MB', duration: '00:40', createTime: '2024-01-03 15:00:00' }
+])
+
+// 获取媒体来源标签类型
+const getMediaSourceType = (source: string) => {
+  const map: Record<string, string> = {
+    '报警抓拍': 'danger',
+    '手动抓拍': 'primary',
+    '定时抓拍': 'success'
+  }
+  return map[source] || 'info'
+}
+
+// 媒体预览
+const handleMediaPreview = (row: any) => {
+  ElMessage.info(`预览文件: ${row.fileName}`)
+}
+
+// 媒体下载
+const handleMediaDownload = (row: any) => {
+  ElMessage.success(`开始下载: ${row.fileName}`)
+}
+
+// 媒体删除
+const handleMediaDelete = (row: any) => {
+  ElMessage.warning(`确认删除: ${row.fileName}`)
+}
+
+// ============ 系统模块 ============
+const systemFilters = ref({
+  type: '',
+  level: '',
+  keyword: ''
+})
+
+// 系统统计数据
+const systemStats = ref({
+  onlineDevices: 145,
+  offlineDevices: 12,
+  warnings: 8,
+  errors: 2
+})
+
+// 系统消息表格数据
+const systemTableData = ref([
+  { id: 1, time: '2024-01-03 18:05:23', type: '设备状态', level: 'info', device: '沪A12345', message: '设备上线，信号强度良好' },
+  { id: 2, time: '2024-01-03 18:03:15', type: '通信状态', level: 'warning', device: '沪B67890', message: 'GPS信号弱，定位精度降低' },
+  { id: 3, time: '2024-01-03 18:01:00', type: '系统日志', level: 'error', device: '服务器', message: '视频服务连接超时，正在重试...' },
+  { id: 4, time: '2024-01-03 17:58:42', type: '设备状态', level: 'info', device: '京A11111', message: '设备固件升级成功 v2.3.1' },
+  { id: 5, time: '2024-01-03 17:55:30', type: '通信状态', level: 'warning', device: '粤A22222', message: '设备离线超过10分钟' },
+  { id: 6, time: '2024-01-03 17:50:00', type: '系统日志', level: 'info', device: '系统', message: '定时备份任务执行完成' }
+])
+
+// 获取系统类型标签
+const getSystemTypeTag = (type: string) => {
+  const map: Record<string, string> = {
+    '设备状态': 'primary',
+    '通信状态': 'warning',
+    '系统日志': 'info'
+  }
+  return map[type] || 'info'
+}
+
+// 获取级别文字
+const getLevelText = (level: string) => {
+  const map: Record<string, string> = {
+    'info': '正常',
+    'warning': '警告',
+    'error': '错误'
+  }
+  return map[level] || level
+}
+
+// 刷新系统数据
+const refreshSystemData = () => {
+  ElMessage.success('数据已刷新')
+}
+
+// 查看系统消息详情
+const handleSystemDetail = (row: any) => {
+  ElMessage.info(`查看详情: ${row.message}`)
+}
+
 // 获取车辆状态样式
 const getVehicleStatusClass = (data: any) => {
   if (!data) return 'offline'
@@ -1054,12 +1324,25 @@ const initMap = async () => {
       switch (action) {
         case 'track':
           console.log('开始跟踪车辆:', vehicle.plateNo)
+          // 定位并跟踪车辆
+          if (map) {
+            map.setZoomAndCenter(16, [vehicle.lng, vehicle.lat])
+          }
+          ElMessage.success(`开始跟踪: ${vehicle.plateNo}`)
           break
         case 'video':
           console.log('打开视频:', vehicle.plateNo)
+          // 切换到视频模式并添加车辆视频
+          viewMode.value = 'video'
+          addVehicleToVideoWindow(vehicle)
+          ElMessage.success(`已添加视频: ${vehicle.plateNo}`)
           break
         case 'replay':
-          console.log('打开轨迹回放:', vehicle.plateNo)
+          // 跳转到轨迹回放页面，带上车牌号参数
+          router.push({
+            path: '/replay',
+            query: { plateNo: vehicle.plateNo }
+          })
           break
       }
     }
@@ -1729,6 +2012,149 @@ onUnmounted(() => {
           }
         }
       }
+    }
+  }
+}
+
+// 媒体文件面板样式
+.media-panel {
+  padding: 8px 12px;
+
+  .media-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+
+    .toolbar-filters {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      gap: 8px;
+    }
+  }
+
+  .media-preview {
+    width: 50px;
+    height: 36px;
+    background: #f0f2f5;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #e6f7ff;
+    }
+
+    .preview-icon {
+      font-size: 20px;
+
+      &.video {
+        color: #409eff;
+      }
+      &.image {
+        color: #67c23a;
+      }
+      &.audio {
+        color: #e6a23c;
+      }
+    }
+  }
+}
+
+// 系统面板样式
+.system-panel {
+  padding: 8px 12px;
+
+  .system-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+
+    .toolbar-filters {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      gap: 8px;
+    }
+  }
+
+  .system-stats {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 10px;
+
+    .stat-card {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      border-left: 3px solid;
+
+      &.online {
+        border-color: #67c23a;
+        .stat-icon { color: #67c23a; }
+      }
+      &.offline {
+        border-color: #909399;
+        .stat-icon { color: #909399; }
+      }
+      &.warning {
+        border-color: #e6a23c;
+        .stat-icon { color: #e6a23c; }
+      }
+      &.error {
+        border-color: #f56c6c;
+        .stat-icon { color: #f56c6c; }
+      }
+
+      .stat-icon {
+        font-size: 28px;
+      }
+
+      .stat-info {
+        .stat-value {
+          font-size: 20px;
+          font-weight: 600;
+          color: #303133;
+        }
+        .stat-label {
+          font-size: 12px;
+          color: #909399;
+        }
+      }
+    }
+  }
+
+  .level-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+
+    &.info {
+      color: #67c23a;
+    }
+    &.warning {
+      color: #e6a23c;
+    }
+    &.error {
+      color: #f56c6c;
     }
   }
 }

@@ -1,6 +1,12 @@
 import { Router, Request, Response } from 'express'
-import jwt from 'jsonwebtoken'
+import jwt, { SignOptions } from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
+
+// JWT 配置
+const JWT_SECRET = process.env.JWT_SECRET || 'secret-key'
+const JWT_OPTIONS: SignOptions = {
+  expiresIn: '7d'
+}
 
 const router = Router()
 
@@ -46,8 +52,8 @@ router.post('/login', async (req: Request, res: Response) => {
 
       const token = jwt.sign(
         { userId: mockUser.id, username: mockUser.username },
-        process.env.JWT_SECRET || 'secret-key',
-        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+        JWT_SECRET,
+        JWT_OPTIONS
       )
 
       return res.json({
@@ -63,8 +69,8 @@ router.post('/login', async (req: Request, res: Response) => {
     if (user) {
       const token = jwt.sign(
         { userId: user.id, username: user.username },
-        process.env.JWT_SECRET || 'secret-key',
-        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+        JWT_SECRET,
+        JWT_OPTIONS
       )
 
       const { password: _, ...userWithoutPassword } = user

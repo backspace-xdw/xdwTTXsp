@@ -168,7 +168,7 @@ const navMenus = [
   { path: '/dashboard', label: '仪表盘', icon: DataAnalysis },
   { path: '/monitor', label: '实时监控', icon: Monitor, badge: 134 },
   { path: '/group-mon', label: '分组监控', icon: Grid },
-  { path: '/ai-safe', label: 'AI安全', icon: Warning },
+  { path: '/ai-safe', label: '安全监控', icon: Warning },
   { path: '/replay', label: '轨迹回放', icon: Refresh },
   { path: '/multi-video', label: '多视频', icon: VideoCamera },
   { path: '/safety-cal', label: '安全计算', icon: Cpu },
