@@ -72,9 +72,9 @@
 
       <!-- 运营看板内容 -->
       <div v-if="activeTab === 'operation'" class="tab-content">
-        <!-- 统计卡片 -->
-        <div class="stats-cards">
-          <div class="stat-card">
+        <!-- 统计卡片 - 8个卡片 -->
+        <div class="stats-cards eight-cols">
+          <div class="stat-card mini">
             <div class="stat-icon green">
               <el-icon><OfficeBuilding /></el-icon>
             </div>
@@ -83,7 +83,7 @@
               <div class="stat-value orange">{{ stats.totalEnterprises }}</div>
             </div>
           </div>
-          <div class="stat-card">
+          <div class="stat-card mini">
             <div class="stat-icon yellow">
               <el-icon><User /></el-icon>
             </div>
@@ -92,7 +92,7 @@
               <div class="stat-value">{{ stats.totalDrivers }}</div>
             </div>
           </div>
-          <div class="stat-card">
+          <div class="stat-card mini">
             <div class="stat-icon cyan">
               <el-icon><Van /></el-icon>
             </div>
@@ -101,7 +101,7 @@
               <div class="stat-value blue">{{ stats.totalVehicles }}</div>
             </div>
           </div>
-          <div class="stat-card">
+          <div class="stat-card mini">
             <div class="stat-icon orange">
               <el-icon><Connection /></el-icon>
             </div>
@@ -110,25 +110,47 @@
               <div class="stat-value orange">{{ stats.todayOnline }}</div>
             </div>
           </div>
+          <div class="stat-card mini">
+            <div class="stat-icon red">
+              <el-icon><Warning /></el-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-label">当前报警车辆</div>
+              <div class="stat-value red">{{ stats.alarmVehicles }}</div>
+            </div>
+          </div>
+          <div class="stat-card mini">
+            <div class="stat-icon blue">
+              <el-icon><Monitor /></el-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-label">当前在线数</div>
+              <div class="stat-value green">{{ stats.currentOnline }}</div>
+            </div>
+          </div>
+          <div class="stat-card mini">
+            <div class="stat-icon purple">
+              <el-icon><Odometer /></el-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-label">日均里程</div>
+              <div class="stat-value">{{ stats.averageMileage }}</div>
+            </div>
+          </div>
+          <div class="stat-card mini">
+            <div class="stat-icon teal">
+              <el-icon><Clock /></el-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-label">日均在线时长</div>
+              <div class="stat-value">{{ stats.averageOnlineHours }}</div>
+            </div>
+          </div>
         </div>
 
-        <!-- 平均里程 -->
-        <div class="mileage-card">
-          <div class="mileage-icon">
-            <el-icon><Odometer /></el-icon>
-          </div>
-          <div class="mileage-info">
-            <div class="mileage-label">平均里程(公里/天)</div>
-            <div class="mileage-value">{{ stats.averageMileage }}</div>
-          </div>
-          <div class="mileage-chart">
-            <el-icon><Clock /></el-icon>
-          </div>
-        </div>
-
-        <!-- 图表区域 -->
+        <!-- 图表区域 - 第一行 -->
         <div class="charts-section">
-          <div class="chart-row">
+          <div class="chart-row three-cols">
             <!-- 车辆运营状态 -->
             <div class="chart-card">
               <div class="chart-header">
@@ -169,9 +191,7 @@
                 <div ref="onlineTrendChartRef" class="chart-container"></div>
               </div>
             </div>
-          </div>
 
-          <div class="chart-row">
             <!-- 查岗情况 -->
             <div class="chart-card check-card">
               <div class="chart-header">
@@ -185,13 +205,17 @@
               <div class="chart-body">
                 <div class="date-toggle">
                   <el-button-group>
-                    <el-button :type="dateRange === 'today' ? 'primary' : ''" @click="dateRange = 'today'">今天</el-button>
-                    <el-button :type="dateRange === 'yesterday' ? 'primary' : ''" @click="dateRange = 'yesterday'">昨日</el-button>
+                    <el-button :type="dateRange === 'today' ? 'primary' : ''" size="small" @click="dateRange = 'today'">今天</el-button>
+                    <el-button :type="dateRange === 'yesterday' ? 'primary' : ''" size="small" @click="dateRange = 'yesterday'">昨日</el-button>
                   </el-button-group>
                 </div>
+                <div ref="checkChartRef" class="chart-container small"></div>
               </div>
             </div>
+          </div>
 
+          <!-- 第二行图表 -->
+          <div class="chart-row four-cols">
             <!-- 里程排名 -->
             <div class="chart-card">
               <div class="chart-header">
@@ -202,49 +226,164 @@
                 <div ref="mileageRankChartRef" class="chart-container"></div>
               </div>
             </div>
+
+            <!-- 报警分布情况 -->
+            <div class="chart-card">
+              <div class="chart-header">
+                <span class="chart-title">报警分布情况</span>
+              </div>
+              <div class="chart-body">
+                <div ref="alarmDistributionChartRef" class="chart-container"></div>
+              </div>
+            </div>
+
+            <!-- 报警趋势 -->
+            <div class="chart-card">
+              <div class="chart-header">
+                <span class="chart-title">报警趋势</span>
+              </div>
+              <div class="chart-body">
+                <div ref="alarmTrendOperationChartRef" class="chart-container"></div>
+              </div>
+            </div>
+
+            <!-- 在线时长排名 -->
+            <div class="chart-card">
+              <div class="chart-header">
+                <span class="chart-title">在线时长排名（小时）</span>
+                <el-button type="primary" size="small" :icon="TrendCharts" circle />
+              </div>
+              <div class="chart-body">
+                <div ref="onlineTimeRankChartRef" class="chart-container"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- 安全看板内容 -->
       <div v-if="activeTab === 'safety'" class="tab-content">
-        <div class="stats-cards">
-          <div class="stat-card">
-            <div class="stat-icon red">
-              <el-icon><Warning /></el-icon>
+        <!-- AI报警统计卡片 -->
+        <div class="ai-alarm-section">
+          <div class="section-title">AI报警统计</div>
+          <div class="ai-alarm-cards">
+            <div class="ai-alarm-card total">
+              <div class="ai-alarm-icon">
+                <el-icon><Warning /></el-icon>
+              </div>
+              <div class="ai-alarm-info">
+                <div class="ai-alarm-label">AI报警总数</div>
+                <div class="ai-alarm-value">{{ aiAlarmStats.total }}</div>
+              </div>
             </div>
-            <div class="stat-info">
-              <div class="stat-label">今日报警总数</div>
-              <div class="stat-value red">{{ safetyStats.todayAlarms }}</div>
+            <div class="ai-alarm-card">
+              <div class="ai-alarm-icon blue">
+                <el-icon><Camera /></el-icon>
+              </div>
+              <div class="ai-alarm-info">
+                <div class="ai-alarm-label">驾驶辅助</div>
+                <div class="ai-alarm-value">{{ aiAlarmStats.adas }}</div>
+              </div>
+            </div>
+            <div class="ai-alarm-card">
+              <div class="ai-alarm-icon orange">
+                <el-icon><User /></el-icon>
+              </div>
+              <div class="ai-alarm-info">
+                <div class="ai-alarm-label">驾驶员异常</div>
+                <div class="ai-alarm-value">{{ aiAlarmStats.dsm }}</div>
+              </div>
+            </div>
+            <div class="ai-alarm-card">
+              <div class="ai-alarm-icon purple">
+                <el-icon><View /></el-icon>
+              </div>
+              <div class="ai-alarm-info">
+                <div class="ai-alarm-label">盲点监测</div>
+                <div class="ai-alarm-value">{{ aiAlarmStats.bsd }}</div>
+              </div>
+            </div>
+            <div class="ai-alarm-card">
+              <div class="ai-alarm-icon red">
+                <el-icon><Compass /></el-icon>
+              </div>
+              <div class="ai-alarm-info">
+                <div class="ai-alarm-label">激烈驾驶</div>
+                <div class="ai-alarm-value">{{ aiAlarmStats.aggressive }}</div>
+              </div>
+            </div>
+            <div class="ai-alarm-card">
+              <div class="ai-alarm-icon green">
+                <el-icon><Position /></el-icon>
+              </div>
+              <div class="ai-alarm-info">
+                <div class="ai-alarm-label">卫星定位</div>
+                <div class="ai-alarm-value">{{ aiAlarmStats.gps }}</div>
+              </div>
+            </div>
+            <div class="ai-alarm-card">
+              <div class="ai-alarm-icon cyan">
+                <el-icon><Cpu /></el-icon>
+              </div>
+              <div class="ai-alarm-info">
+                <div class="ai-alarm-label">智能检测</div>
+                <div class="ai-alarm-value">{{ aiAlarmStats.smart }}</div>
+              </div>
             </div>
           </div>
+        </div>
+
+        <!-- 安全统计卡片 -->
+        <div class="stats-cards">
           <div class="stat-card">
             <div class="stat-icon orange">
-              <el-icon><Bell /></el-icon>
+              <el-icon><Document /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-label">未处理报警</div>
-              <div class="stat-value orange">{{ safetyStats.unhandled }}</div>
+              <div class="stat-label">车辆电子证件到期数</div>
+              <div class="stat-value orange">{{ safetyStats.expiredDocs }}</div>
             </div>
           </div>
           <div class="stat-card">
             <div class="stat-icon blue">
-              <el-icon><Camera /></el-icon>
+              <el-icon><Reading /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-label">ADAS报警</div>
-              <div class="stat-value blue">{{ safetyStats.adas }}</div>
+              <div class="stat-label">未完成安全教育司机数</div>
+              <div class="stat-value blue">{{ safetyStats.untrainedDrivers }}</div>
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon purple">
-              <el-icon><View /></el-icon>
+            <div class="stat-icon red">
+              <el-icon><Bell /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-label">DSM报警</div>
-              <div class="stat-value purple">{{ safetyStats.dsm }}</div>
+              <div class="stat-label">近7天未处理报警数</div>
+              <div class="stat-value red">{{ safetyStats.unhandledAlarms }}</div>
             </div>
           </div>
+          <div class="stat-card">
+            <div class="stat-icon green">
+              <el-icon><CircleCheck /></el-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-label">近7天报警处理率</div>
+              <div class="stat-value green">{{ safetyStats.handleRate }}%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 报警类型筛选 -->
+        <div class="alarm-filter-tabs">
+          <el-radio-group v-model="alarmFilter" size="small">
+            <el-radio-button label="all">全部</el-radio-button>
+            <el-radio-button label="id">ID</el-radio-button>
+            <el-radio-button label="sp">SP</el-radio-button>
+            <el-radio-button label="fd">FD</el-radio-button>
+            <el-radio-button label="bsd">BSD</el-radio-button>
+            <el-radio-button label="dsm">DSM</el-radio-button>
+            <el-radio-button label="adas">ADAS</el-radio-button>
+          </el-radio-group>
         </div>
 
         <div class="charts-section">
@@ -266,58 +405,153 @@
               </div>
             </div>
           </div>
+
+          <div class="chart-row">
+            <div class="chart-card">
+              <div class="chart-header">
+                <span class="chart-title">报警处理情况</span>
+              </div>
+              <div class="chart-body">
+                <div ref="alarmHandleChartRef" class="chart-container"></div>
+              </div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-header">
+                <span class="chart-title">报警车辆排名</span>
+              </div>
+              <div class="chart-body">
+                <div ref="alarmVehicleRankChartRef" class="chart-container"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- 数据看板内容 -->
       <div v-if="activeTab === 'data'" class="tab-content">
-        <div class="stats-cards">
+        <!-- 数据统计卡片 - 6个 -->
+        <div class="stats-cards six-cols">
           <div class="stat-card">
             <div class="stat-icon blue">
-              <el-icon><DataLine /></el-icon>
+              <el-icon><Van /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-label">今日数据量</div>
-              <div class="stat-value blue">{{ dataStats.todayData }}</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon green">
-              <el-icon><Upload /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-label">上传成功率</div>
-              <div class="stat-value green">{{ dataStats.uploadRate }}%</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon cyan">
-              <el-icon><Timer /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-label">平均响应时间</div>
-              <div class="stat-value">{{ dataStats.responseTime }}ms</div>
+              <div class="stat-label">车辆总数</div>
+              <div class="stat-value blue">{{ dataStats.totalVehicles }}</div>
             </div>
           </div>
           <div class="stat-card">
             <div class="stat-icon orange">
-              <el-icon><Histogram /></el-icon>
+              <el-icon><User /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-label">存储使用量</div>
-              <div class="stat-value orange">{{ dataStats.storage }}GB</div>
+              <div class="stat-label">司机总数</div>
+              <div class="stat-value orange">{{ dataStats.totalDrivers }}</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green">
+              <el-icon><Tickets /></el-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-label">总订单数目</div>
+              <div class="stat-value green">{{ dataStats.totalOrders }}</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon cyan">
+              <el-icon><Money /></el-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-label">总订单营收</div>
+              <div class="stat-value">¥{{ dataStats.totalRevenue }}</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon purple">
+              <el-icon><Odometer /></el-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-label">平均里程订单</div>
+              <div class="stat-value purple">{{ dataStats.avgMileageOrder }}</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon red">
+              <el-icon><Coin /></el-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-label">平均里程营收</div>
+              <div class="stat-value">¥{{ dataStats.avgMileageRevenue }}</div>
             </div>
           </div>
         </div>
 
         <div class="charts-section">
+          <!-- 行驶里程和里程利用率走势 -->
           <div class="chart-row">
-            <div class="chart-card full-width">
+            <div class="chart-card">
               <div class="chart-header">
-                <span class="chart-title">数据上报趋势</span>
+                <span class="chart-title">行驶里程（公里）</span>
               </div>
               <div class="chart-body">
-                <div ref="dataReportChartRef" class="chart-container tall"></div>
+                <div ref="drivingMileageChartRef" class="chart-container"></div>
+              </div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-header">
+                <span class="chart-title">里程利用率走势</span>
+              </div>
+              <div class="chart-body">
+                <div ref="mileageUtilizationChartRef" class="chart-container"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 排名图表 -->
+          <div class="chart-row three-cols">
+            <div class="chart-card">
+              <div class="chart-header">
+                <span class="chart-title">里程订单排名</span>
+              </div>
+              <div class="chart-body">
+                <div ref="mileageOrderRankChartRef" class="chart-container"></div>
+              </div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-header">
+                <span class="chart-title">里程营收排名</span>
+              </div>
+              <div class="chart-body">
+                <div ref="mileageRevenueRankChartRef" class="chart-container"></div>
+              </div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-header">
+                <span class="chart-title">空驶里程排名</span>
+              </div>
+              <div class="chart-body">
+                <div ref="emptyMileageRankChartRef" class="chart-container"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 订单和营收 -->
+          <div class="chart-row">
+            <div class="chart-card">
+              <div class="chart-header">
+                <span class="chart-title">订单数目排名</span>
+              </div>
+              <div class="chart-body">
+                <div ref="orderCountRankChartRef" class="chart-container"></div>
+              </div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-header">
+                <span class="chart-title">营收走势</span>
+              </div>
+              <div class="chart-body">
+                <div ref="revenueTrendChartRef" class="chart-container"></div>
               </div>
             </div>
           </div>
@@ -346,26 +580,40 @@ import {
   DataLine,
   Upload,
   Timer,
-  Histogram
+  Histogram,
+  Monitor,
+  Compass,
+  Position,
+  Cpu,
+  Document,
+  Reading,
+  CircleCheck,
+  Tickets,
+  Money,
+  Coin
 } from '@element-plus/icons-vue'
 
 // 状态
 const activeTab = ref('operation')
 const searchKeyword = ref('')
 const dateRange = ref('today')
+const alarmFilter = ref('all')
 const filters = ref({
   type: '',
   status: '',
   device: ''
 })
 
-// 运营统计数据
+// 运营统计数据 - 增加新字段
 const stats = ref({
   totalEnterprises: 30,
   totalDrivers: 0,
   totalVehicles: 4558,
-  todayOnline: 378,
-  averageMileage: 10.33
+  todayOnline: 353,
+  alarmVehicles: 111,
+  currentOnline: 150,
+  averageMileage: 11.65,
+  averageOnlineHours: 0.52
 })
 
 // 运营数据
@@ -382,20 +630,33 @@ const checkData = ref({
   unanswered: 0
 })
 
+// AI报警统计
+const aiAlarmStats = ref({
+  total: 12568,
+  adas: 3456,
+  dsm: 2890,
+  bsd: 1234,
+  aggressive: 987,
+  gps: 2345,
+  smart: 1656
+})
+
 // 安全统计
 const safetyStats = ref({
-  todayAlarms: 1256,
-  unhandled: 89,
-  adas: 456,
-  dsm: 312
+  expiredDocs: 23,
+  untrainedDrivers: 156,
+  unhandledAlarms: 89,
+  handleRate: 92.5
 })
 
 // 数据统计
 const dataStats = ref({
-  todayData: 125680,
-  uploadRate: 99.8,
-  responseTime: 45,
-  storage: 1024
+  totalVehicles: 4558,
+  totalDrivers: 1234,
+  totalOrders: 125680,
+  totalRevenue: 1568900,
+  avgMileageOrder: 45.6,
+  avgMileageRevenue: 12.8
 })
 
 // 车辆树数据
@@ -411,13 +672,29 @@ const vehicleTreeData = ref([
   }
 ])
 
-// 图表引用
+// 图表引用 - 运营看板
 const operationChartRef = ref<HTMLElement>()
 const onlineTrendChartRef = ref<HTMLElement>()
+const checkChartRef = ref<HTMLElement>()
 const mileageRankChartRef = ref<HTMLElement>()
+const alarmDistributionChartRef = ref<HTMLElement>()
+const alarmTrendOperationChartRef = ref<HTMLElement>()
+const onlineTimeRankChartRef = ref<HTMLElement>()
+
+// 图表引用 - 安全看板
 const alarmTypeChartRef = ref<HTMLElement>()
 const alarmTrendChartRef = ref<HTMLElement>()
-const dataReportChartRef = ref<HTMLElement>()
+const alarmHandleChartRef = ref<HTMLElement>()
+const alarmVehicleRankChartRef = ref<HTMLElement>()
+
+// 图表引用 - 数据看板
+const drivingMileageChartRef = ref<HTMLElement>()
+const mileageUtilizationChartRef = ref<HTMLElement>()
+const mileageOrderRankChartRef = ref<HTMLElement>()
+const mileageRevenueRankChartRef = ref<HTMLElement>()
+const emptyMileageRankChartRef = ref<HTMLElement>()
+const orderCountRankChartRef = ref<HTMLElement>()
+const revenueTrendChartRef = ref<HTMLElement>()
 
 let charts: echarts.ECharts[] = []
 
@@ -494,6 +771,28 @@ const initOnlineTrendChart = () => {
   })
 }
 
+// 初始化查岗情况图表
+const initCheckChart = () => {
+  if (!checkChartRef.value) return
+
+  const chart = echarts.init(checkChartRef.value)
+  charts.push(chart)
+
+  chart.setOption({
+    tooltip: { trigger: 'item' },
+    series: [{
+      type: 'pie',
+      radius: ['40%', '60%'],
+      center: ['50%', '50%'],
+      data: [
+        { value: checkData.value.answered, name: '已应答', itemStyle: { color: '#67c23a' } },
+        { value: checkData.value.unanswered, name: '未应答', itemStyle: { color: '#f56c6c' } }
+      ],
+      label: { show: false }
+    }]
+  })
+}
+
 // 初始化里程排名图表
 const initMileageRankChart = () => {
   if (!mileageRankChartRef.value) return
@@ -532,6 +831,129 @@ const initMileageRankChart = () => {
         color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
           { offset: 0, color: '#409eff' },
           { offset: 1, color: '#67c23a' }
+        ]),
+        borderRadius: [0, 8, 8, 0]
+      },
+      label: {
+        show: true,
+        position: 'right',
+        formatter: '{c}',
+        color: '#666'
+      }
+    }]
+  })
+}
+
+// 初始化报警分布图表
+const initAlarmDistributionChart = () => {
+  if (!alarmDistributionChartRef.value) return
+
+  const chart = echarts.init(alarmDistributionChartRef.value)
+  charts.push(chart)
+
+  chart.setOption({
+    tooltip: { trigger: 'item' },
+    legend: {
+      orient: 'vertical',
+      right: 10,
+      top: 'center',
+      itemWidth: 10,
+      itemHeight: 10
+    },
+    series: [{
+      type: 'pie',
+      radius: ['35%', '55%'],
+      center: ['35%', '50%'],
+      data: [
+        { value: 456, name: '超速', itemStyle: { color: '#f56c6c' } },
+        { value: 312, name: '疲劳', itemStyle: { color: '#e6a23c' } },
+        { value: 234, name: '越界', itemStyle: { color: '#409eff' } },
+        { value: 178, name: '离线', itemStyle: { color: '#909399' } },
+        { value: 156, name: '其他', itemStyle: { color: '#67c23a' } }
+      ],
+      label: { show: false }
+    }]
+  })
+}
+
+// 初始化运营看板报警趋势图表
+const initAlarmTrendOperationChart = () => {
+  if (!alarmTrendOperationChartRef.value) return
+
+  const chart = echarts.init(alarmTrendOperationChartRef.value)
+  charts.push(chart)
+
+  const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+
+  chart.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 50, right: 20, top: 20, bottom: 30 },
+    xAxis: {
+      type: 'category',
+      data: days,
+      axisLine: { lineStyle: { color: '#e8e8e8' } },
+      axisLabel: { color: '#666' }
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: '#f0f0f0' } },
+      axisLabel: { color: '#666' }
+    },
+    series: [{
+      type: 'bar',
+      data: [120, 200, 150, 80, 70, 110, 130],
+      barWidth: 20,
+      itemStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: '#f56c6c' },
+          { offset: 1, color: '#fbc4c4' }
+        ]),
+        borderRadius: [4, 4, 0, 0]
+      }
+    }]
+  })
+}
+
+// 初始化在线时长排名图表
+const initOnlineTimeRankChart = () => {
+  if (!onlineTimeRankChartRef.value) return
+
+  const chart = echarts.init(onlineTimeRankChartRef.value)
+  charts.push(chart)
+
+  const data = [
+    { name: '沪A12345', value: 23.5 },
+    { name: '京B67890', value: 21.2 },
+    { name: '粤C11111', value: 19.8 },
+    { name: '苏D22222', value: 18.5 },
+    { name: '浙E33333', value: 16.2 }
+  ]
+
+  chart.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 100, right: 60, top: 10, bottom: 10 },
+    xAxis: {
+      type: 'value',
+      show: false
+    },
+    yAxis: {
+      type: 'category',
+      inverse: true,
+      data: data.map(d => d.name),
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: '#333' }
+    },
+    series: [{
+      type: 'bar',
+      data: data.map(d => d.value),
+      barWidth: 16,
+      itemStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+          { offset: 0, color: '#67c23a' },
+          { offset: 1, color: '#95d475' }
         ]),
         borderRadius: [0, 8, 8, 0]
       },
@@ -598,45 +1020,287 @@ const initAlarmTrendChart = () => {
   })
 }
 
-// 初始化数据上报图表
-const initDataReportChart = () => {
-  if (!dataReportChartRef.value) return
+// 初始化报警处理图表
+const initAlarmHandleChart = () => {
+  if (!alarmHandleChartRef.value) return
 
-  const chart = echarts.init(dataReportChartRef.value)
+  const chart = echarts.init(alarmHandleChartRef.value)
+  charts.push(chart)
+
+  chart.setOption({
+    tooltip: { trigger: 'item' },
+    series: [{
+      type: 'pie',
+      radius: ['40%', '60%'],
+      center: ['50%', '50%'],
+      data: [
+        { value: 856, name: '已处理', itemStyle: { color: '#67c23a' } },
+        { value: 89, name: '未处理', itemStyle: { color: '#f56c6c' } },
+        { value: 45, name: '处理中', itemStyle: { color: '#e6a23c' } }
+      ],
+      label: {
+        show: true,
+        formatter: '{b}: {c}'
+      }
+    }]
+  })
+}
+
+// 初始化报警车辆排名图表
+const initAlarmVehicleRankChart = () => {
+  if (!alarmVehicleRankChartRef.value) return
+
+  const chart = echarts.init(alarmVehicleRankChartRef.value)
+  charts.push(chart)
+
+  const data = [
+    { name: '沪A12345', value: 45 },
+    { name: '京B67890', value: 38 },
+    { name: '粤C11111', value: 32 },
+    { name: '苏D22222', value: 28 },
+    { name: '浙E33333', value: 21 }
+  ]
+
+  chart.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 100, right: 60, top: 10, bottom: 10 },
+    xAxis: { type: 'value', show: false },
+    yAxis: {
+      type: 'category',
+      inverse: true,
+      data: data.map(d => d.name),
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: '#333' }
+    },
+    series: [{
+      type: 'bar',
+      data: data.map(d => d.value),
+      barWidth: 16,
+      itemStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+          { offset: 0, color: '#f56c6c' },
+          { offset: 1, color: '#fbc4c4' }
+        ]),
+        borderRadius: [0, 8, 8, 0]
+      },
+      label: {
+        show: true,
+        position: 'right',
+        formatter: '{c}',
+        color: '#666'
+      }
+    }]
+  })
+}
+
+// 初始化行驶里程图表
+const initDrivingMileageChart = () => {
+  if (!drivingMileageChartRef.value) return
+
+  const chart = echarts.init(drivingMileageChartRef.value)
+  charts.push(chart)
+
+  const days = ['1日', '5日', '10日', '15日', '20日', '25日', '30日']
+
+  chart.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 60, right: 20, top: 20, bottom: 30 },
+    xAxis: {
+      type: 'category',
+      data: days,
+      axisLine: { lineStyle: { color: '#e8e8e8' } },
+      axisLabel: { color: '#666' }
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: '#f0f0f0' } },
+      axisLabel: { color: '#666' }
+    },
+    series: [{
+      type: 'bar',
+      data: [12000, 15000, 13500, 16800, 14200, 17500, 15800],
+      barWidth: 30,
+      itemStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: '#409eff' },
+          { offset: 1, color: '#79bbff' }
+        ]),
+        borderRadius: [4, 4, 0, 0]
+      }
+    }]
+  })
+}
+
+// 初始化里程利用率图表
+const initMileageUtilizationChart = () => {
+  if (!mileageUtilizationChartRef.value) return
+
+  const chart = echarts.init(mileageUtilizationChartRef.value)
+  charts.push(chart)
+
+  const days = ['1日', '5日', '10日', '15日', '20日', '25日', '30日']
+
+  chart.setOption({
+    tooltip: { trigger: 'axis', formatter: '{b}: {c}%' },
+    grid: { left: 60, right: 20, top: 20, bottom: 30 },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: days,
+      axisLine: { lineStyle: { color: '#e8e8e8' } },
+      axisLabel: { color: '#666' }
+    },
+    yAxis: {
+      type: 'value',
+      max: 100,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: '#f0f0f0' } },
+      axisLabel: { color: '#666', formatter: '{value}%' }
+    },
+    series: [{
+      type: 'line',
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 6,
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: 'rgba(103, 194, 58, 0.3)' },
+          { offset: 1, color: 'rgba(103, 194, 58, 0.05)' }
+        ])
+      },
+      lineStyle: { color: '#67c23a', width: 2 },
+      itemStyle: { color: '#67c23a' },
+      data: [65, 72, 68, 78, 82, 75, 80]
+    }]
+  })
+}
+
+// 初始化排名图表的通用函数
+const initRankChart = (chartRef: HTMLElement | undefined, data: { name: string; value: number }[], color1: string, color2: string) => {
+  if (!chartRef) return null
+
+  const chart = echarts.init(chartRef)
   charts.push(chart)
 
   chart.setOption({
     tooltip: { trigger: 'axis' },
-    legend: { data: ['GPS数据', '报警数据', '媒体数据'], top: 0 },
-    grid: { left: 60, right: 20, top: 40, bottom: 30 },
+    grid: { left: 100, right: 60, top: 10, bottom: 10 },
+    xAxis: { type: 'value', show: false },
+    yAxis: {
+      type: 'category',
+      inverse: true,
+      data: data.map(d => d.name),
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: '#333' }
+    },
+    series: [{
+      type: 'bar',
+      data: data.map(d => d.value),
+      barWidth: 14,
+      itemStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+          { offset: 0, color: color1 },
+          { offset: 1, color: color2 }
+        ]),
+        borderRadius: [0, 7, 7, 0]
+      },
+      label: {
+        show: true,
+        position: 'right',
+        formatter: '{c}',
+        color: '#666'
+      }
+    }]
+  })
+
+  return chart
+}
+
+// 初始化数据看板排名图表
+const initDataRankCharts = () => {
+  // 里程订单排名
+  initRankChart(mileageOrderRankChartRef.value, [
+    { name: '沪A12345', value: 156 },
+    { name: '京B67890', value: 142 },
+    { name: '粤C11111', value: 128 },
+    { name: '苏D22222', value: 115 },
+    { name: '浙E33333', value: 98 }
+  ], '#409eff', '#79bbff')
+
+  // 里程营收排名
+  initRankChart(mileageRevenueRankChartRef.value, [
+    { name: '沪A12345', value: 12800 },
+    { name: '京B67890', value: 11500 },
+    { name: '粤C11111', value: 10200 },
+    { name: '苏D22222', value: 9800 },
+    { name: '浙E33333', value: 8500 }
+  ], '#67c23a', '#95d475')
+
+  // 空驶里程排名
+  initRankChart(emptyMileageRankChartRef.value, [
+    { name: '沪A12345', value: 856 },
+    { name: '京B67890', value: 742 },
+    { name: '粤C11111', value: 628 },
+    { name: '苏D22222', value: 515 },
+    { name: '浙E33333', value: 398 }
+  ], '#e6a23c', '#f3d19e')
+
+  // 订单数目排名
+  initRankChart(orderCountRankChartRef.value, [
+    { name: '沪A12345', value: 89 },
+    { name: '京B67890', value: 76 },
+    { name: '粤C11111', value: 68 },
+    { name: '苏D22222', value: 54 },
+    { name: '浙E33333', value: 42 }
+  ], '#9b59b6', '#c39bd3')
+}
+
+// 初始化营收走势图表
+const initRevenueTrendChart = () => {
+  if (!revenueTrendChartRef.value) return
+
+  const chart = echarts.init(revenueTrendChartRef.value)
+  charts.push(chart)
+
+  const days = ['1日', '5日', '10日', '15日', '20日', '25日', '30日']
+
+  chart.setOption({
+    tooltip: { trigger: 'axis', formatter: '{b}: ¥{c}' },
+    grid: { left: 80, right: 20, top: 20, bottom: 30 },
     xAxis: {
       type: 'category',
-      data: Array.from({ length: 24 }, (_, i) => `${i}:00`)
+      boundaryGap: false,
+      data: days,
+      axisLine: { lineStyle: { color: '#e8e8e8' } },
+      axisLabel: { color: '#666' }
     },
-    yAxis: { type: 'value' },
-    series: [
-      {
-        name: 'GPS数据',
-        type: 'bar',
-        stack: 'total',
-        data: Array.from({ length: 24 }, () => Math.floor(Math.random() * 5000 + 3000)),
-        itemStyle: { color: '#409eff' }
+    yAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: '#f0f0f0' } },
+      axisLabel: { color: '#666' }
+    },
+    series: [{
+      type: 'line',
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 6,
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: 'rgba(155, 89, 182, 0.3)' },
+          { offset: 1, color: 'rgba(155, 89, 182, 0.05)' }
+        ])
       },
-      {
-        name: '报警数据',
-        type: 'bar',
-        stack: 'total',
-        data: Array.from({ length: 24 }, () => Math.floor(Math.random() * 500 + 100)),
-        itemStyle: { color: '#f56c6c' }
-      },
-      {
-        name: '媒体数据',
-        type: 'bar',
-        stack: 'total',
-        data: Array.from({ length: 24 }, () => Math.floor(Math.random() * 1000 + 500)),
-        itemStyle: { color: '#67c23a' }
-      }
-    ]
+      lineStyle: { color: '#9b59b6', width: 2 },
+      itemStyle: { color: '#9b59b6' },
+      data: [45000, 52000, 48000, 58000, 62000, 55000, 68000]
+    }]
   })
 }
 
@@ -655,12 +1319,21 @@ const initCurrentTabCharts = () => {
     if (activeTab.value === 'operation') {
       initOperationChart()
       initOnlineTrendChart()
+      initCheckChart()
       initMileageRankChart()
+      initAlarmDistributionChart()
+      initAlarmTrendOperationChart()
+      initOnlineTimeRankChart()
     } else if (activeTab.value === 'safety') {
       initAlarmTypeChart()
       initAlarmTrendChart()
+      initAlarmHandleChart()
+      initAlarmVehicleRankChart()
     } else if (activeTab.value === 'data') {
-      initDataReportChart()
+      initDrivingMileageChart()
+      initMileageUtilizationChart()
+      initDataRankCharts()
+      initRevenueTrendChart()
     }
   })
 }
@@ -770,11 +1443,112 @@ onUnmounted(() => {
     animation: fadeIn 0.3s ease;
   }
 
+  // AI报警统计区域
+  .ai-alarm-section {
+    margin-bottom: 16px;
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 12px;
+    }
+
+    .ai-alarm-cards {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 12px;
+
+      .ai-alarm-card {
+        background: #fff;
+        border-radius: 8px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+        &.total {
+          background: linear-gradient(135deg, #409eff, #67c23a);
+
+          .ai-alarm-icon {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+          }
+
+          .ai-alarm-info {
+            .ai-alarm-label,
+            .ai-alarm-value {
+              color: #fff;
+            }
+          }
+        }
+
+        .ai-alarm-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 20px;
+          background: #f0f2f5;
+          color: #409eff;
+
+          &.blue { background: #ecf5ff; color: #409eff; }
+          &.orange { background: #fdf6ec; color: #e6a23c; }
+          &.purple { background: #f4ecfb; color: #9b59b6; }
+          &.red { background: #fef0f0; color: #f56c6c; }
+          &.green { background: #f0f9eb; color: #67c23a; }
+          &.cyan { background: #e6f7ff; color: #00bcd4; }
+        }
+
+        .ai-alarm-info {
+          text-align: center;
+
+          .ai-alarm-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+          }
+
+          .ai-alarm-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+          }
+        }
+      }
+    }
+  }
+
+  // 报警筛选标签
+  .alarm-filter-tabs {
+    margin-bottom: 16px;
+
+    .el-radio-group {
+      background: #fff;
+      padding: 8px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+  }
+
   .stats-cards {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 16px;
     margin-bottom: 16px;
+
+    &.eight-cols {
+      grid-template-columns: repeat(8, 1fr);
+      gap: 12px;
+    }
+
+    &.six-cols {
+      grid-template-columns: repeat(6, 1fr);
+    }
 
     .stat-card {
       background: #fff;
@@ -784,6 +1558,27 @@ onUnmounted(() => {
       align-items: center;
       gap: 16px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+      &.mini {
+        padding: 12px;
+        gap: 10px;
+
+        .stat-icon {
+          width: 40px;
+          height: 40px;
+          font-size: 20px;
+        }
+
+        .stat-info {
+          .stat-label {
+            font-size: 11px;
+          }
+
+          .stat-value {
+            font-size: 20px;
+          }
+        }
+      }
 
       .stat-icon {
         width: 56px;
@@ -802,6 +1597,7 @@ onUnmounted(() => {
         &.yellow { background: #f4d03f; }
         &.red { background: #f56c6c; }
         &.purple { background: #9b59b6; }
+        &.teal { background: #20c997; }
       }
 
       .stat-info {
@@ -883,6 +1679,14 @@ onUnmounted(() => {
       gap: 16px;
       margin-bottom: 16px;
 
+      &.three-cols {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      &.four-cols {
+        grid-template-columns: repeat(4, 1fr);
+      }
+
       &:has(.full-width) {
         grid-template-columns: 1fr;
       }
@@ -944,6 +1748,10 @@ onUnmounted(() => {
           &.tall {
             height: 300px;
           }
+
+          &.small {
+            height: 120px;
+          }
         }
 
         .chart-with-legend {
@@ -983,7 +1791,7 @@ onUnmounted(() => {
         .date-toggle {
           display: flex;
           justify-content: center;
-          padding: 20px 0;
+          padding: 10px 0;
         }
       }
     }
@@ -1001,14 +1809,47 @@ onUnmounted(() => {
   to { opacity: 1; }
 }
 
+@media (max-width: 1600px) {
+  .dashboard-content {
+    .stats-cards.eight-cols {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .ai-alarm-section .ai-alarm-cards {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .charts-section {
+      .chart-row.three-cols,
+      .chart-row.four-cols {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  }
+}
+
 @media (max-width: 1200px) {
   .dashboard-content {
     .stats-cards {
+      grid-template-columns: repeat(2, 1fr);
+
+      &.eight-cols,
+      &.six-cols {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .ai-alarm-section .ai-alarm-cards {
       grid-template-columns: repeat(2, 1fr);
     }
 
     .charts-section .chart-row {
       grid-template-columns: 1fr;
+
+      &.three-cols,
+      &.four-cols {
+        grid-template-columns: 1fr;
+      }
     }
   }
 }
