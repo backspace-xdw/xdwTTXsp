@@ -540,8 +540,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { getVehicles, getVehicleStats, type VehicleData } from '@/api/vehicle'
 import {
   Search,
   Setting,
@@ -577,6 +578,7 @@ import {
 import { ElMessage } from 'element-plus'
 import AMapLoader from '@amap/amap-jsapi-loader'
 import { useVehicleStore } from '@/stores/vehicle'
+import { getSocket } from '@/utils/websocket'
 import type { VehicleTreeNode } from '@/types'
 
 const router = useRouter()
@@ -854,147 +856,130 @@ const treeProps = {
   label: 'label'
 }
 
-// 车辆详细数据（包含位置信息）
-const vehicleDataMap = ref<Record<string, any>>({
-  'v-1': {
-    id: 'v-1',
-    plateNo: '沪A12345',
-    driverName: '张三',
-    driverPhone: '138****1234',
-    companyName: '金旅',
-    groupName: 'A组',
-    deviceId: 'DEV001',
-    online: true,
-    status: 'driving',
-    speed: 65,
-    direction: 45,
-    lng: 121.4737,
-    lat: 31.2304,
-    gpsTime: '2024-01-03 18:00:00',
-    address: '上海市浦东新区张江高科技园区',
-    mileage: 12580,
-    todayMileage: 156.8
-  },
-  'v-2': {
-    id: 'v-2',
-    plateNo: '沪B67890',
-    driverName: '李四',
-    driverPhone: '139****5678',
-    companyName: '金旅',
-    groupName: 'B组',
-    deviceId: 'DEV002',
-    online: true,
-    status: 'parking_acc_on',
-    speed: 0,
-    direction: 180,
-    lng: 121.4837,
-    lat: 31.2404,
-    gpsTime: '2024-01-03 17:55:00',
-    address: '上海市黄浦区南京东路步行街',
-    mileage: 8920,
-    todayMileage: 89.2
-  },
-  'v-3': {
-    id: 'v-3',
-    plateNo: '沪C11111',
-    driverName: '王五',
-    driverPhone: '137****9012',
-    companyName: '金旅',
-    groupName: 'C组',
-    deviceId: 'DEV003',
-    online: false,
-    status: 'offline',
-    speed: 0,
-    direction: 0,
-    lng: 121.4637,
-    lat: 31.2204,
-    gpsTime: '2024-01-03 12:30:00',
-    address: '上海市浦东新区世纪大道',
-    mileage: 15680,
-    todayMileage: 45.5
-  },
-  'v-4': {
-    id: 'v-4',
-    plateNo: '京A11111',
-    driverName: '赵六',
-    driverPhone: '136****3456',
-    companyName: '本安测试部',
-    groupName: '测试组',
-    deviceId: 'DEV004',
-    online: true,
-    status: 'driving',
-    speed: 45,
-    direction: 270,
-    lng: 116.4074,
-    lat: 39.9042,
-    gpsTime: '2024-01-03 18:05:00',
-    address: '北京市朝阳区CBD商务区',
-    mileage: 22340,
-    todayMileage: 178.9
-  },
-  'v-5': {
-    id: 'v-5',
-    plateNo: '粤A22222',
-    driverName: '钱七',
-    driverPhone: '135****7890',
-    companyName: '山东四通',
-    groupName: 'D组',
-    deviceId: 'DEV005',
-    online: false,
-    status: 'offline',
-    speed: 0,
-    direction: 90,
-    lng: 113.2644,
-    lat: 23.1291,
-    gpsTime: '2024-01-02 20:15:00',
-    address: '广州市天河区珠江新城',
-    mileage: 34560,
-    todayMileage: 0
-  }
-})
+// 车辆详细数据（包含位置信息）- 从API获取
+const vehicleDataMap = ref<Record<string, any>>({})
 
-// 模拟车辆树数据
-const vehicleTreeData = ref<any[]>([
-  {
-    id: 'company-1',
-    label: '监控中心 (151/4558)',
-    type: 'company',
-    children: [
-      {
-        id: 'company-2',
-        label: '808 (0/5)',
-        type: 'company',
-        children: []
-      },
-      {
-        id: 'company-3',
-        label: '金旅 (144/4187)',
-        type: 'company',
-        children: [
-          { id: 'v-1', label: '沪A12345', type: 'vehicle', data: vehicleDataMap.value['v-1'] },
-          { id: 'v-2', label: '沪B67890', type: 'vehicle', data: vehicleDataMap.value['v-2'] },
-          { id: 'v-3', label: '沪C11111', type: 'vehicle', data: vehicleDataMap.value['v-3'] }
-        ]
-      },
-      {
-        id: 'company-4',
-        label: '本安测试部 (1/89)',
-        type: 'company',
-        children: [
-          { id: 'v-4', label: '京A11111', type: 'vehicle', data: vehicleDataMap.value['v-4'] }
-        ]
-      },
-      {
-        id: 'company-5',
-        label: '山东四通 (6/20)',
-        type: 'company',
-        children: [
-          { id: 'v-5', label: '粤A22222', type: 'vehicle', data: vehicleDataMap.value['v-5'] }
-        ]
+// 加载中状态
+const loading = ref(false)
+
+// 从API获取车辆数据
+const fetchVehicles = async () => {
+  try {
+    loading.value = true
+    const res = await getVehicles({ pageSize: 1000 })
+    if (res.code === 0 && res.data.list) {
+      // 转换为vehicleDataMap格式
+      const newMap: Record<string, any> = {}
+      res.data.list.forEach((v: VehicleData) => {
+        const key = `v-${v.id}`
+        newMap[key] = {
+          id: key,
+          plateNo: v.plateNo,
+          driverName: v.driverName || '',
+          driverPhone: '',
+          companyName: v.companyName,
+          groupName: v.groupName,
+          deviceId: v.deviceId,
+          online: v.online,
+          status: v.status,
+          speed: v.speed,
+          direction: v.direction,
+          lng: v.lng,
+          lat: v.lat,
+          gpsTime: v.gpsTime,
+          address: '',  // 需要逆地理编码
+          mileage: v.mileage,
+          todayMileage: 0,
+          alarmFlag: v.alarmFlag,
+          accOn: v.accOn,
+          manufacturer: v.manufacturer,
+          terminalModel: v.terminalModel
+        }
+      })
+      vehicleDataMap.value = newMap
+      console.log('[Monitor] Loaded', Object.keys(newMap).length, 'vehicles from API')
+
+      // 更新地图标记
+      if (AMapInstance && map) {
+        addVehicleMarkers(AMapInstance)
       }
-    ]
+    }
+  } catch (error) {
+    console.error('[Monitor] Failed to fetch vehicles:', error)
+  } finally {
+    loading.value = false
   }
-])
+}
+
+// 监听WebSocket GPS更新
+const handleGpsUpdate = (data: any) => {
+  // 查找并更新对应的车辆
+  for (const [key, vehicle] of Object.entries(vehicleDataMap.value)) {
+    if (vehicle.deviceId === data.deviceId) {
+      vehicleDataMap.value[key] = {
+        ...vehicle,
+        lat: data.lat,
+        lng: data.lng,
+        speed: data.speed,
+        direction: data.direction,
+        gpsTime: data.gpsTime,
+        online: true,
+        accOn: data.accOn,
+        alarmFlag: data.alarmFlag,
+        status: data.speed > 0 ? 'driving' : (data.accOn ? 'parking_acc_on' : 'acc_off')
+      }
+
+      // 更新地图上的标记位置
+      if (markerMap[key] && AMapInstance) {
+        markerMap[key].setPosition([data.lng, data.lat])
+        markerMap[key].setIcon(getMarkerIcon(AMapInstance, vehicleDataMap.value[key].status))
+      }
+
+      console.log('[Monitor] GPS update for', vehicle.plateNo, ':', data.lat.toFixed(4), data.lng.toFixed(4), data.speed + 'km/h')
+      break
+    }
+  }
+}
+
+// 车辆树数据 - 根据vehicleDataMap动态计算
+const vehicleTreeData = computed(() => {
+  const vehicles = Object.values(vehicleDataMap.value)
+  const onlineCount = vehicles.filter((v: any) => v.online).length
+  const totalCount = vehicles.length
+
+  // 按公司分组
+  const companyMap: Record<string, any[]> = {}
+  vehicles.forEach((v: any) => {
+    const companyName = v.companyName || 'JT808设备'
+    if (!companyMap[companyName]) {
+      companyMap[companyName] = []
+    }
+    companyMap[companyName].push(v)
+  })
+
+  // 构建子节点
+  const children: any[] = Object.entries(companyMap).map(([companyName, vList], index) => {
+    const companyOnline = vList.filter((v: any) => v.online).length
+    return {
+      id: `company-${index + 2}`,
+      label: `${companyName} (${companyOnline}/${vList.length})`,
+      type: 'company',
+      children: vList.map((v: any) => ({
+        id: v.id,
+        label: v.plateNo,
+        type: 'vehicle',
+        data: v
+      }))
+    }
+  })
+
+  return [{
+    id: 'company-1',
+    label: `监控中心 (${onlineCount}/${totalCount})`,
+    type: 'company',
+    children
+  }]
+})
 
 // GPS表格数据 - 从vehicleDataMap生成
 const gpsTableData = computed(() => {
@@ -1396,7 +1381,10 @@ const addVehicleMarkers = (AMap: any) => {
   })
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // 获取车辆数据
+  await fetchVehicles()
+
   nextTick(() => {
     initMap()
   })
@@ -1404,6 +1392,17 @@ onMounted(() => {
   // 更新时间
   updateTime()
   timeTimer = setInterval(updateTime, 1000)
+
+  // 监听WebSocket GPS更新
+  const socket = getSocket()
+  if (socket) {
+    socket.on('gps:update', handleGpsUpdate)
+    console.log('[Monitor] Subscribed to GPS updates')
+  }
+
+  // 定时刷新数据 (每30秒)
+  const refreshTimer = setInterval(fetchVehicles, 30000)
+  onUnmounted(() => clearInterval(refreshTimer))
 })
 
 onUnmounted(() => {
