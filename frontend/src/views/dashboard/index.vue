@@ -564,6 +564,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import * as echarts from 'echarts'
+import { ElMessage } from 'element-plus'
 import {
   Setting,
   OfficeBuilding,
@@ -592,35 +593,38 @@ import {
   Money,
   Coin
 } from '@element-plus/icons-vue'
+import { getOperationData, getSafetyData, getDataDashboard } from '@/api/dashboard'
+import type { OperationData, SafetyData, DataDashboardData } from '@/api/dashboard'
 
 // 状态
 const activeTab = ref('operation')
 const searchKeyword = ref('')
 const dateRange = ref('today')
 const alarmFilter = ref('all')
+const loading = ref(false)
 const filters = ref({
   type: '',
   status: '',
   device: ''
 })
 
-// 运营统计数据 - 增加新字段
+// 运营统计数据
 const stats = ref({
-  totalEnterprises: 30,
+  totalEnterprises: 0,
   totalDrivers: 0,
-  totalVehicles: 4558,
-  todayOnline: 353,
-  alarmVehicles: 111,
-  currentOnline: 150,
-  averageMileage: 11.65,
-  averageOnlineHours: 0.52
+  totalVehicles: 0,
+  todayOnline: 0,
+  alarmVehicles: 0,
+  currentOnline: 0,
+  averageMileage: 0,
+  averageOnlineHours: 0
 })
 
 // 运营数据
 const operationData = ref({
-  normal: 4557,
+  normal: 0,
   stopped: 0,
-  expired: 1
+  expired: 0
 })
 
 // 查岗数据
@@ -630,47 +634,163 @@ const checkData = ref({
   unanswered: 0
 })
 
+// API返回的图表数据
+const operationChartData = ref<{
+  onlineTrend: number[]
+  mileageRank: { name: string; value: number }[]
+  alarmDistribution: { name: string; value: number }[]
+  alarmTrend: { date: string; count: number }[]
+  onlineTimeRank: { name: string; value: number }[]
+}>({
+  onlineTrend: [],
+  mileageRank: [],
+  alarmDistribution: [],
+  alarmTrend: [],
+  onlineTimeRank: []
+})
+
 // AI报警统计
 const aiAlarmStats = ref({
-  total: 12568,
-  adas: 3456,
-  dsm: 2890,
-  bsd: 1234,
-  aggressive: 987,
-  gps: 2345,
-  smart: 1656
+  total: 0,
+  adas: 0,
+  dsm: 0,
+  bsd: 0,
+  aggressive: 0,
+  gps: 0,
+  smart: 0
 })
 
 // 安全统计
 const safetyStats = ref({
-  expiredDocs: 23,
-  untrainedDrivers: 156,
-  unhandledAlarms: 89,
-  handleRate: 92.5
+  expiredDocs: 0,
+  untrainedDrivers: 0,
+  unhandledAlarms: 0,
+  handleRate: 0
+})
+
+// 安全看板图表数据
+const safetyChartData = ref<{
+  alarmTypeDistribution: { name: string; value: number }[]
+  alarmTrend: { date: string; adas: number; dsm: number; bsd: number }[]
+  alarmHandleStats: { handled: number; unhandled: number; processing: number }
+  alarmVehicleRank: { name: string; value: number }[]
+}>({
+  alarmTypeDistribution: [],
+  alarmTrend: [],
+  alarmHandleStats: { handled: 0, unhandled: 0, processing: 0 },
+  alarmVehicleRank: []
 })
 
 // 数据统计
 const dataStats = ref({
-  totalVehicles: 4558,
-  totalDrivers: 1234,
-  totalOrders: 125680,
-  totalRevenue: 1568900,
-  avgMileageOrder: 45.6,
-  avgMileageRevenue: 12.8
+  totalVehicles: 0,
+  totalDrivers: 0,
+  totalOrders: 0,
+  totalRevenue: 0,
+  avgMileageOrder: 0,
+  avgMileageRevenue: 0
+})
+
+// 数据看板图表数据
+const dataChartData = ref<{
+  drivingMileage: { date: string; value: number }[]
+  mileageUtilization: { date: string; value: number }[]
+  mileageOrderRank: { name: string; value: number }[]
+  mileageRevenueRank: { name: string; value: number }[]
+  emptyMileageRank: { name: string; value: number }[]
+  orderCountRank: { name: string; value: number }[]
+  revenueTrend: { date: string; value: number }[]
+}>({
+  drivingMileage: [],
+  mileageUtilization: [],
+  mileageOrderRank: [],
+  mileageRevenueRank: [],
+  emptyMileageRank: [],
+  orderCountRank: [],
+  revenueTrend: []
 })
 
 // 车辆树数据
 const vehicleTreeData = ref([
   {
-    label: '监控中心 (151/4558)',
-    children: [
-      { label: '808测试 (0/5)' },
-      { label: '金旅 (144/4187)' },
-      { label: '本安测试部 (6/89)' },
-      { label: '山东四通 (1/20)' }
-    ]
+    label: '监控中心 (0/0)',
+    children: []
   }
 ])
+
+// 获取运营看板数据
+async function fetchOperationData() {
+  try {
+    loading.value = true
+    const res = await getOperationData()
+    if (res.code === 0 && res.data) {
+      stats.value = res.data.stats
+      operationData.value = res.data.operationData
+      operationChartData.value = {
+        onlineTrend: res.data.onlineTrend,
+        mileageRank: res.data.mileageRank,
+        alarmDistribution: res.data.alarmDistribution,
+        alarmTrend: res.data.alarmTrend,
+        onlineTimeRank: res.data.onlineTimeRank
+      }
+      // 更新车辆树
+      vehicleTreeData.value = [{
+        label: `监控中心 (${stats.value.currentOnline}/${stats.value.totalVehicles})`,
+        children: []
+      }]
+    }
+  } catch (error) {
+    console.error('获取运营数据失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 获取安全看板数据
+async function fetchSafetyData() {
+  try {
+    loading.value = true
+    const res = await getSafetyData()
+    if (res.code === 0 && res.data) {
+      aiAlarmStats.value = res.data.aiAlarmStats
+      safetyStats.value = res.data.safetyStats
+      safetyChartData.value = {
+        alarmTypeDistribution: res.data.alarmTypeDistribution,
+        alarmTrend: res.data.alarmTrend,
+        alarmHandleStats: res.data.alarmHandleStats,
+        alarmVehicleRank: res.data.alarmVehicleRank
+      }
+    }
+  } catch (error) {
+    console.error('获取安全数据失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 获取数据看板数据
+async function fetchDataDashboard() {
+  try {
+    loading.value = true
+    const res = await getDataDashboard()
+    if (res.code === 0 && res.data) {
+      dataStats.value = res.data.dataStats
+      dataChartData.value = {
+        drivingMileage: res.data.drivingMileage,
+        mileageUtilization: res.data.mileageUtilization,
+        mileageOrderRank: res.data.mileageOrderRank,
+        mileageRevenueRank: res.data.mileageRevenueRank,
+        emptyMileageRank: res.data.emptyMileageRank,
+        orderCountRank: res.data.orderCountRank,
+        revenueTrend: res.data.revenueTrend
+      }
+    }
+  } catch (error) {
+    console.error('获取数据看板失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
 
 // 图表引用 - 运营看板
 const operationChartRef = ref<HTMLElement>()
@@ -735,6 +855,10 @@ const initOnlineTrendChart = () => {
   const chart = echarts.init(onlineTrendChartRef.value)
   charts.push(chart)
 
+  const trendData = operationChartData.value.onlineTrend.length > 0
+    ? operationChartData.value.onlineTrend
+    : [0, 0, 0, 0, 0, 0, 0]
+
   chart.setOption({
     tooltip: { trigger: 'axis' },
     grid: { left: 50, right: 20, top: 20, bottom: 30 },
@@ -747,7 +871,6 @@ const initOnlineTrendChart = () => {
     },
     yAxis: {
       type: 'value',
-      max: 350,
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: '#f0f0f0' } },
@@ -766,7 +889,7 @@ const initOnlineTrendChart = () => {
       },
       lineStyle: { color: '#409eff', width: 2 },
       itemStyle: { color: '#409eff' },
-      data: [50, 30, 150, 280, 320, 250, 100]
+      data: trendData
     }]
   })
 }
@@ -800,13 +923,9 @@ const initMileageRankChart = () => {
   const chart = echarts.init(mileageRankChartRef.value)
   charts.push(chart)
 
-  const data = [
-    { name: '沪A12345', value: 2856 },
-    { name: '京B67890', value: 2340 },
-    { name: '粤C11111', value: 1980 },
-    { name: '苏D22222', value: 1650 },
-    { name: '浙E33333', value: 1420 }
-  ]
+  const data = operationChartData.value.mileageRank.length > 0
+    ? operationChartData.value.mileageRank
+    : [{ name: '暂无数据', value: 0 }]
 
   chart.setOption({
     tooltip: { trigger: 'axis' },
@@ -851,6 +970,15 @@ const initAlarmDistributionChart = () => {
   const chart = echarts.init(alarmDistributionChartRef.value)
   charts.push(chart)
 
+  const colors = ['#f56c6c', '#e6a23c', '#409eff', '#909399', '#67c23a']
+  const data = operationChartData.value.alarmDistribution.length > 0
+    ? operationChartData.value.alarmDistribution.map((item, idx) => ({
+        value: item.value,
+        name: item.name,
+        itemStyle: { color: colors[idx % colors.length] }
+      }))
+    : [{ value: 0, name: '暂无数据', itemStyle: { color: '#909399' } }]
+
   chart.setOption({
     tooltip: { trigger: 'item' },
     legend: {
@@ -864,13 +992,7 @@ const initAlarmDistributionChart = () => {
       type: 'pie',
       radius: ['35%', '55%'],
       center: ['35%', '50%'],
-      data: [
-        { value: 456, name: '超速', itemStyle: { color: '#f56c6c' } },
-        { value: 312, name: '疲劳', itemStyle: { color: '#e6a23c' } },
-        { value: 234, name: '越界', itemStyle: { color: '#409eff' } },
-        { value: 178, name: '离线', itemStyle: { color: '#909399' } },
-        { value: 156, name: '其他', itemStyle: { color: '#67c23a' } }
-      ],
+      data,
       label: { show: false }
     }]
   })
@@ -883,14 +1005,20 @@ const initAlarmTrendOperationChart = () => {
   const chart = echarts.init(alarmTrendOperationChartRef.value)
   charts.push(chart)
 
-  const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+  const alarmTrend = operationChartData.value.alarmTrend
+  const dates = alarmTrend.length > 0
+    ? alarmTrend.map(item => item.date)
+    : ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+  const counts = alarmTrend.length > 0
+    ? alarmTrend.map(item => item.count)
+    : [0, 0, 0, 0, 0, 0, 0]
 
   chart.setOption({
     tooltip: { trigger: 'axis' },
     grid: { left: 50, right: 20, top: 20, bottom: 30 },
     xAxis: {
       type: 'category',
-      data: days,
+      data: dates,
       axisLine: { lineStyle: { color: '#e8e8e8' } },
       axisLabel: { color: '#666' }
     },
@@ -903,7 +1031,7 @@ const initAlarmTrendOperationChart = () => {
     },
     series: [{
       type: 'bar',
-      data: [120, 200, 150, 80, 70, 110, 130],
+      data: counts,
       barWidth: 20,
       itemStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
@@ -923,13 +1051,9 @@ const initOnlineTimeRankChart = () => {
   const chart = echarts.init(onlineTimeRankChartRef.value)
   charts.push(chart)
 
-  const data = [
-    { name: '沪A12345', value: 23.5 },
-    { name: '京B67890', value: 21.2 },
-    { name: '粤C11111', value: 19.8 },
-    { name: '苏D22222', value: 18.5 },
-    { name: '浙E33333', value: 16.2 }
-  ]
+  const data = operationChartData.value.onlineTimeRank.length > 0
+    ? operationChartData.value.onlineTimeRank
+    : [{ name: '暂无数据', value: 0 }]
 
   chart.setOption({
     tooltip: { trigger: 'axis' },
@@ -974,6 +1098,15 @@ const initAlarmTypeChart = () => {
   const chart = echarts.init(alarmTypeChartRef.value)
   charts.push(chart)
 
+  const colors = ['#409eff', '#67c23a', '#e6a23c', '#f56c6c', '#909399']
+  const data = safetyChartData.value.alarmTypeDistribution.length > 0
+    ? safetyChartData.value.alarmTypeDistribution.map((item, idx) => ({
+        value: item.value,
+        name: item.name,
+        itemStyle: { color: colors[idx % colors.length] }
+      }))
+    : [{ value: 0, name: '暂无数据', itemStyle: { color: '#909399' } }]
+
   chart.setOption({
     tooltip: { trigger: 'item' },
     legend: {
@@ -985,13 +1118,7 @@ const initAlarmTypeChart = () => {
       type: 'pie',
       radius: ['40%', '65%'],
       center: ['35%', '50%'],
-      data: [
-        { value: 456, name: 'ADAS报警', itemStyle: { color: '#409eff' } },
-        { value: 312, name: 'DSM报警', itemStyle: { color: '#67c23a' } },
-        { value: 234, name: 'BSD报警', itemStyle: { color: '#e6a23c' } },
-        { value: 178, name: '超速报警', itemStyle: { color: '#f56c6c' } },
-        { value: 76, name: '其他报警', itemStyle: { color: '#909399' } }
-      ]
+      data
     }]
   })
 }
@@ -1003,19 +1130,33 @@ const initAlarmTrendChart = () => {
   const chart = echarts.init(alarmTrendChartRef.value)
   charts.push(chart)
 
+  const alarmTrend = safetyChartData.value.alarmTrend
+  const dates = alarmTrend.length > 0
+    ? alarmTrend.map(item => item.date)
+    : ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+  const adasData = alarmTrend.length > 0
+    ? alarmTrend.map(item => item.adas)
+    : [0, 0, 0, 0, 0, 0, 0]
+  const dsmData = alarmTrend.length > 0
+    ? alarmTrend.map(item => item.dsm)
+    : [0, 0, 0, 0, 0, 0, 0]
+  const bsdData = alarmTrend.length > 0
+    ? alarmTrend.map(item => item.bsd)
+    : [0, 0, 0, 0, 0, 0, 0]
+
   chart.setOption({
     tooltip: { trigger: 'axis' },
     legend: { data: ['ADAS', 'DSM', 'BSD'], top: 0 },
     grid: { left: 50, right: 20, top: 40, bottom: 30 },
     xAxis: {
       type: 'category',
-      data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+      data: dates
     },
     yAxis: { type: 'value' },
     series: [
-      { name: 'ADAS', type: 'line', data: [120, 132, 101, 134, 90, 230, 210], itemStyle: { color: '#409eff' } },
-      { name: 'DSM', type: 'line', data: [220, 182, 191, 234, 290, 330, 310], itemStyle: { color: '#67c23a' } },
-      { name: 'BSD', type: 'line', data: [150, 232, 201, 154, 190, 330, 410], itemStyle: { color: '#e6a23c' } }
+      { name: 'ADAS', type: 'line', data: adasData, itemStyle: { color: '#409eff' } },
+      { name: 'DSM', type: 'line', data: dsmData, itemStyle: { color: '#67c23a' } },
+      { name: 'BSD', type: 'line', data: bsdData, itemStyle: { color: '#e6a23c' } }
     ]
   })
 }
@@ -1027,6 +1168,8 @@ const initAlarmHandleChart = () => {
   const chart = echarts.init(alarmHandleChartRef.value)
   charts.push(chart)
 
+  const handleStats = safetyChartData.value.alarmHandleStats
+
   chart.setOption({
     tooltip: { trigger: 'item' },
     series: [{
@@ -1034,9 +1177,9 @@ const initAlarmHandleChart = () => {
       radius: ['40%', '60%'],
       center: ['50%', '50%'],
       data: [
-        { value: 856, name: '已处理', itemStyle: { color: '#67c23a' } },
-        { value: 89, name: '未处理', itemStyle: { color: '#f56c6c' } },
-        { value: 45, name: '处理中', itemStyle: { color: '#e6a23c' } }
+        { value: handleStats.handled, name: '已处理', itemStyle: { color: '#67c23a' } },
+        { value: handleStats.unhandled, name: '未处理', itemStyle: { color: '#f56c6c' } },
+        { value: handleStats.processing, name: '处理中', itemStyle: { color: '#e6a23c' } }
       ],
       label: {
         show: true,
@@ -1053,13 +1196,9 @@ const initAlarmVehicleRankChart = () => {
   const chart = echarts.init(alarmVehicleRankChartRef.value)
   charts.push(chart)
 
-  const data = [
-    { name: '沪A12345', value: 45 },
-    { name: '京B67890', value: 38 },
-    { name: '粤C11111', value: 32 },
-    { name: '苏D22222', value: 28 },
-    { name: '浙E33333', value: 21 }
-  ]
+  const data = safetyChartData.value.alarmVehicleRank.length > 0
+    ? safetyChartData.value.alarmVehicleRank
+    : [{ name: '暂无数据', value: 0 }]
 
   chart.setOption({
     tooltip: { trigger: 'axis' },
@@ -1101,14 +1240,20 @@ const initDrivingMileageChart = () => {
   const chart = echarts.init(drivingMileageChartRef.value)
   charts.push(chart)
 
-  const days = ['1日', '5日', '10日', '15日', '20日', '25日', '30日']
+  const mileageData = dataChartData.value.drivingMileage
+  const dates = mileageData.length > 0
+    ? mileageData.map(item => item.date)
+    : ['1日', '5日', '10日', '15日', '20日', '25日', '30日']
+  const values = mileageData.length > 0
+    ? mileageData.map(item => item.value)
+    : [0, 0, 0, 0, 0, 0, 0]
 
   chart.setOption({
     tooltip: { trigger: 'axis' },
     grid: { left: 60, right: 20, top: 20, bottom: 30 },
     xAxis: {
       type: 'category',
-      data: days,
+      data: dates,
       axisLine: { lineStyle: { color: '#e8e8e8' } },
       axisLabel: { color: '#666' }
     },
@@ -1121,7 +1266,7 @@ const initDrivingMileageChart = () => {
     },
     series: [{
       type: 'bar',
-      data: [12000, 15000, 13500, 16800, 14200, 17500, 15800],
+      data: values,
       barWidth: 30,
       itemStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
@@ -1141,7 +1286,13 @@ const initMileageUtilizationChart = () => {
   const chart = echarts.init(mileageUtilizationChartRef.value)
   charts.push(chart)
 
-  const days = ['1日', '5日', '10日', '15日', '20日', '25日', '30日']
+  const utilizationData = dataChartData.value.mileageUtilization
+  const dates = utilizationData.length > 0
+    ? utilizationData.map(item => item.date)
+    : ['1日', '5日', '10日', '15日', '20日', '25日', '30日']
+  const values = utilizationData.length > 0
+    ? utilizationData.map(item => item.value)
+    : [0, 0, 0, 0, 0, 0, 0]
 
   chart.setOption({
     tooltip: { trigger: 'axis', formatter: '{b}: {c}%' },
@@ -1149,7 +1300,7 @@ const initMileageUtilizationChart = () => {
     xAxis: {
       type: 'category',
       boundaryGap: false,
-      data: days,
+      data: dates,
       axisLine: { lineStyle: { color: '#e8e8e8' } },
       axisLabel: { color: '#666' }
     },
@@ -1174,7 +1325,7 @@ const initMileageUtilizationChart = () => {
       },
       lineStyle: { color: '#67c23a', width: 2 },
       itemStyle: { color: '#67c23a' },
-      data: [65, 72, 68, 78, 82, 75, 80]
+      data: values
     }]
   })
 }
@@ -1223,41 +1374,43 @@ const initRankChart = (chartRef: HTMLElement | undefined, data: { name: string; 
 
 // 初始化数据看板排名图表
 const initDataRankCharts = () => {
+  const defaultData = [{ name: '暂无数据', value: 0 }]
+
   // 里程订单排名
-  initRankChart(mileageOrderRankChartRef.value, [
-    { name: '沪A12345', value: 156 },
-    { name: '京B67890', value: 142 },
-    { name: '粤C11111', value: 128 },
-    { name: '苏D22222', value: 115 },
-    { name: '浙E33333', value: 98 }
-  ], '#409eff', '#79bbff')
+  initRankChart(
+    mileageOrderRankChartRef.value,
+    dataChartData.value.mileageOrderRank.length > 0
+      ? dataChartData.value.mileageOrderRank
+      : defaultData,
+    '#409eff', '#79bbff'
+  )
 
   // 里程营收排名
-  initRankChart(mileageRevenueRankChartRef.value, [
-    { name: '沪A12345', value: 12800 },
-    { name: '京B67890', value: 11500 },
-    { name: '粤C11111', value: 10200 },
-    { name: '苏D22222', value: 9800 },
-    { name: '浙E33333', value: 8500 }
-  ], '#67c23a', '#95d475')
+  initRankChart(
+    mileageRevenueRankChartRef.value,
+    dataChartData.value.mileageRevenueRank.length > 0
+      ? dataChartData.value.mileageRevenueRank
+      : defaultData,
+    '#67c23a', '#95d475'
+  )
 
   // 空驶里程排名
-  initRankChart(emptyMileageRankChartRef.value, [
-    { name: '沪A12345', value: 856 },
-    { name: '京B67890', value: 742 },
-    { name: '粤C11111', value: 628 },
-    { name: '苏D22222', value: 515 },
-    { name: '浙E33333', value: 398 }
-  ], '#e6a23c', '#f3d19e')
+  initRankChart(
+    emptyMileageRankChartRef.value,
+    dataChartData.value.emptyMileageRank.length > 0
+      ? dataChartData.value.emptyMileageRank
+      : defaultData,
+    '#e6a23c', '#f3d19e'
+  )
 
   // 订单数目排名
-  initRankChart(orderCountRankChartRef.value, [
-    { name: '沪A12345', value: 89 },
-    { name: '京B67890', value: 76 },
-    { name: '粤C11111', value: 68 },
-    { name: '苏D22222', value: 54 },
-    { name: '浙E33333', value: 42 }
-  ], '#9b59b6', '#c39bd3')
+  initRankChart(
+    orderCountRankChartRef.value,
+    dataChartData.value.orderCountRank.length > 0
+      ? dataChartData.value.orderCountRank
+      : defaultData,
+    '#9b59b6', '#c39bd3'
+  )
 }
 
 // 初始化营收走势图表
@@ -1267,7 +1420,13 @@ const initRevenueTrendChart = () => {
   const chart = echarts.init(revenueTrendChartRef.value)
   charts.push(chart)
 
-  const days = ['1日', '5日', '10日', '15日', '20日', '25日', '30日']
+  const revenueTrend = dataChartData.value.revenueTrend
+  const dates = revenueTrend.length > 0
+    ? revenueTrend.map(item => item.date)
+    : ['1日', '5日', '10日', '15日', '20日', '25日', '30日']
+  const values = revenueTrend.length > 0
+    ? revenueTrend.map(item => item.value)
+    : [0, 0, 0, 0, 0, 0, 0]
 
   chart.setOption({
     tooltip: { trigger: 'axis', formatter: '{b}: ¥{c}' },
@@ -1275,7 +1434,7 @@ const initRevenueTrendChart = () => {
     xAxis: {
       type: 'category',
       boundaryGap: false,
-      data: days,
+      data: dates,
       axisLine: { lineStyle: { color: '#e8e8e8' } },
       axisLabel: { color: '#666' }
     },
@@ -1299,7 +1458,7 @@ const initRevenueTrendChart = () => {
       },
       lineStyle: { color: '#9b59b6', width: 2 },
       itemStyle: { color: '#9b59b6' },
-      data: [45000, 52000, 48000, 58000, 62000, 55000, 68000]
+      data: values
     }]
   })
 }
@@ -1310,10 +1469,19 @@ const handleResize = () => {
 }
 
 // 初始化当前Tab的图表
-const initCurrentTabCharts = () => {
+const initCurrentTabCharts = async () => {
   // 清除旧图表
   charts.forEach(chart => chart.dispose())
   charts = []
+
+  // 根据当前tab获取数据
+  if (activeTab.value === 'operation') {
+    await fetchOperationData()
+  } else if (activeTab.value === 'safety') {
+    await fetchSafetyData()
+  } else if (activeTab.value === 'data') {
+    await fetchDataDashboard()
+  }
 
   nextTick(() => {
     if (activeTab.value === 'operation') {
@@ -1346,6 +1514,18 @@ watch(activeTab, () => {
 onMounted(() => {
   initCurrentTabCharts()
   window.addEventListener('resize', handleResize)
+
+  // 设置定时刷新 (每60秒)
+  const refreshInterval = setInterval(() => {
+    if (activeTab.value === 'operation') {
+      fetchOperationData()
+    }
+  }, 60000)
+
+  // 组件卸载时清除定时器
+  onUnmounted(() => {
+    clearInterval(refreshInterval)
+  })
 })
 
 onUnmounted(() => {

@@ -15,6 +15,7 @@ import vehicleRoutes from './routes/vehicle'
 import companyRoutes from './routes/company'
 import alarmRoutes from './routes/alarm'
 import reportRoutes from './routes/report'
+import dashboardRoutes from './routes/dashboard'
 
 // 导入WebSocket处理
 import { setupWebSocket, broadcastGpsUpdate, broadcastAlarm, broadcastDeviceStatus } from './websocket'
@@ -52,6 +53,7 @@ app.use('/api/vehicles', vehicleRoutes)
 app.use('/api/companies', companyRoutes)
 app.use('/api/alarms', alarmRoutes)
 app.use('/api/reports', reportRoutes)
+app.use('/api/dashboard', dashboardRoutes)
 
 // 健康检查
 app.get('/api/health', (req, res) => {
