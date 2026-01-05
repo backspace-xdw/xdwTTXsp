@@ -462,6 +462,7 @@ import {
 } from '@element-plus/icons-vue'
 import AMapLoader from '@amap/amap-jsapi-loader'
 import { ElMessage } from 'element-plus'
+import { getVehicles, getVehicleTrack, type VehicleData } from '@/api/vehicle'
 
 const route = useRoute()
 
@@ -550,35 +551,58 @@ const dateShortcuts = [
   }
 ]
 
-// 模拟车辆树数据
-const vehicleTreeData = ref([
-  {
-    id: 'company-1',
-    label: '监控中心 (151/4558)',
-    type: 'company',
-    children: [
-      {
-        id: 'company-3',
-        label: '金旅 (144/4187)',
+// 车辆树数据 - 从API获取
+const vehicleTreeData = ref<any[]>([])
+
+// 加载车辆列表
+const loadVehicles = async () => {
+  try {
+    const res = await getVehicles({ pageSize: 1000 })
+    if (res.code === 0 && res.data.list) {
+      // 按公司分组
+      const groupMap = new Map<string, any[]>()
+      res.data.list.forEach((v: VehicleData) => {
+        const groupName = v.groupName || 'JT808设备'
+        if (!groupMap.has(groupName)) {
+          groupMap.set(groupName, [])
+        }
+        groupMap.get(groupName)!.push({
+          id: `v-${v.id}`,
+          label: v.plateNo,
+          type: 'vehicle',
+          plateNo: v.plateNo,
+          deviceId: v.deviceId,
+          online: v.online
+        })
+      })
+
+      // 构建树结构
+      const children: any[] = []
+      let totalOnline = 0
+      let total = 0
+      groupMap.forEach((vehicles, groupName) => {
+        const onlineCount = vehicles.filter(v => v.online).length
+        totalOnline += onlineCount
+        total += vehicles.length
+        children.push({
+          id: `group-${groupName}`,
+          label: `${groupName} (${onlineCount}/${vehicles.length})`,
+          type: 'company',
+          children: vehicles
+        })
+      })
+
+      vehicleTreeData.value = [{
+        id: 'company-root',
+        label: `监控中心 (${totalOnline}/${total})`,
         type: 'company',
-        children: [
-          { id: 'v-1', label: '沪A12345', type: 'vehicle', plateNo: '沪A12345', online: true },
-          { id: 'v-2', label: '沪B67890', type: 'vehicle', plateNo: '沪B67890', online: true },
-          { id: 'v-3', label: '沪C11111', type: 'vehicle', plateNo: '沪C11111', online: false }
-        ]
-      },
-      {
-        id: 'company-4',
-        label: '本安测试部 (0/89)',
-        type: 'company',
-        children: [
-          { id: 'v-4', label: '京A11111', type: 'vehicle', plateNo: '京A11111', online: true },
-          { id: 'v-5', label: '粤A22222', type: 'vehicle', plateNo: '粤A22222', online: false }
-        ]
-      }
-    ]
+        children
+      }]
+    }
+  } catch (error) {
+    console.error('加载车辆列表失败:', error)
   }
-])
+}
 
 // 选中的车辆
 const selectedVehicle = ref<any>(null)
@@ -825,65 +849,99 @@ const queryTrack = async () => {
   stopPlayback()
 
   try {
-    // 模拟API请求 - 生成模拟轨迹数据
-    await new Promise(resolve => setTimeout(resolve, 500))
-    trackData.value = generateMockTrackData()
-    alarmPoints.value = generateMockAlarms()
-    stopPoints.value = generateMockStopPoints()
-    currentIndex.value = 0
-    trackTablePage.value = 1
+    // 使用deviceId查询轨迹
+    const deviceId = selectedVehicle.value.deviceId
+    const [startTime, endTime] = queryParams.value.dateRange
 
-    // 绘制轨迹
-    drawTrack()
+    const res = await getVehicleTrack(deviceId, { startTime, endTime })
 
-    ElMessage.success(`查询到 ${trackData.value.length} 个轨迹点`)
+    if (res.code === 0 && res.data) {
+      // 转换API返回的轨迹数据格式
+      trackData.value = res.data.track.map((p: any) => ({
+        lng: p.lng,
+        lat: p.lat,
+        speed: p.speed,
+        direction: p.direction,
+        time: p.time,
+        alarmFlag: p.alarmFlag,
+        address: '' // 地址需要逆地理编码，暂时留空
+      }))
+
+      // 提取报警点
+      alarmPoints.value = trackData.value
+        .map((p: any, index: number) => ({ ...p, index }))
+        .filter((p: any) => p.alarmFlag > 0)
+        .map((p: any) => ({
+          index: p.index,
+          type: getAlarmType(p.alarmFlag),
+          time: p.time?.substring(11) || '',
+          speed: p.speed
+        }))
+
+      // 提取停车点 (速度为0的连续点)
+      stopPoints.value = extractStopPoints(trackData.value)
+
+      currentIndex.value = 0
+      trackTablePage.value = 1
+
+      // 绘制轨迹
+      drawTrack()
+
+      ElMessage.success(`查询到 ${trackData.value.length} 个轨迹点`)
+    } else {
+      trackData.value = []
+      ElMessage.warning('未查询到轨迹数据')
+    }
   } catch (error) {
+    console.error('查询轨迹失败:', error)
     ElMessage.error('查询轨迹失败')
   } finally {
     loading.value = false
   }
 }
 
-// 生成模拟轨迹数据
-function generateMockTrackData() {
-  const points = []
-  // 上海市区模拟轨迹
-  const baseLng = 121.4737
-  const baseLat = 31.2304
-  const startTime = queryParams.value.dateRange
-    ? new Date(queryParams.value.dateRange[0]).getTime()
-    : Date.now()
+// 获取报警类型名称
+function getAlarmType(flag: number): string {
+  if (flag & 0x0002) return '超速报警'
+  if (flag & 0x0004) return '疲劳驾驶'
+  if (flag & 0x0001) return '紧急报警'
+  return '其他报警'
+}
 
-  for (let i = 0; i < 100; i++) {
-    const time = new Date(startTime + i * 60000) // 每分钟一个点
-    points.push({
-      lng: baseLng + (Math.random() - 0.3) * 0.1 + i * 0.001,
-      lat: baseLat + (Math.random() - 0.5) * 0.05 + i * 0.0005,
-      speed: Math.floor(Math.random() * 80) + 20,
-      direction: Math.floor(Math.random() * 360),
-      time: formatDateTime(time),
-      address: `上海市浦东新区${['张江', '金桥', '陆家嘴', '世纪公园'][i % 4]}路${100 + i}号`
-    })
+// 提取停车点
+function extractStopPoints(track: any[]): any[] {
+  const stops: any[] = []
+  let stopStart = -1
+
+  for (let i = 0; i < track.length; i++) {
+    if (track[i].speed === 0) {
+      if (stopStart === -1) {
+        stopStart = i
+      }
+    } else {
+      if (stopStart !== -1 && i - stopStart >= 2) {
+        // 停车超过2个点才算停车
+        const startPoint = track[stopStart]
+        const endPoint = track[i - 1]
+        const startMs = new Date(startPoint.time).getTime()
+        const endMs = new Date(endPoint.time).getTime()
+        const durationMin = Math.floor((endMs - startMs) / 60000)
+
+        if (durationMin >= 1) {
+          stops.push({
+            index: stopStart,
+            startTime: startPoint.time?.substring(11) || '',
+            endTime: endPoint.time?.substring(11) || '',
+            duration: `${durationMin}分钟`,
+            address: startPoint.address || ''
+          })
+        }
+      }
+      stopStart = -1
+    }
   }
-  return points
-}
 
-// 生成模拟报警点
-function generateMockAlarms() {
-  return [
-    { index: 15, type: '超速报警', time: '10:15:00', speed: 95 },
-    { index: 42, type: '疲劳驾驶', time: '10:42:00', speed: 65 },
-    { index: 78, type: '急刹车', time: '11:18:00', speed: 45 }
-  ]
-}
-
-// 生成模拟停车点
-function generateMockStopPoints() {
-  return [
-    { index: 25, startTime: '10:25:00', endTime: '10:32:00', duration: '7分钟', address: '上海市浦东新区张江路125号' },
-    { index: 55, startTime: '10:55:00', endTime: '11:05:00', duration: '10分钟', address: '上海市浦东新区金桥路155号' },
-    { index: 88, startTime: '11:28:00', endTime: '11:35:00', duration: '7分钟', address: '上海市浦东新区陆家嘴路188号' }
-  ]
+  return stops
 }
 
 // 绘制轨迹
@@ -1093,12 +1151,13 @@ const initMap = async () => {
   }
 }
 
-onMounted(() => {
-  nextTick(() => {
-    initMap()
-    // 检查URL参数，自动选择车辆
-    autoSelectVehicle()
-  })
+onMounted(async () => {
+  await nextTick()
+  initMap()
+  // 加载车辆列表
+  await loadVehicles()
+  // 检查URL参数，自动选择车辆
+  autoSelectVehicle()
 })
 
 onUnmounted(() => {

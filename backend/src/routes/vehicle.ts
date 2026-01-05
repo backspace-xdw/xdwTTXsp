@@ -208,14 +208,13 @@ router.get('/:id/location', async (req: Request, res: Response) => {
     // 支持通过 id 或 deviceId 查询
     const idOrDeviceId = req.params.id
 
-    let device: any
-    if (/^\d+$/.test(idOrDeviceId)) {
+    // 优先按device_id查找，如果没找到且是小数字则按主键查找
+    let device: any = await Device.findOne({
+      where: { device_id: idOrDeviceId },
+      include: [{ model: DeviceRealtime, as: 'realtime' }]
+    })
+    if (!device && /^\d+$/.test(idOrDeviceId) && Number(idOrDeviceId) < 100000) {
       device = await Device.findByPk(idOrDeviceId, {
-        include: [{ model: DeviceRealtime, as: 'realtime' }]
-      })
-    } else {
-      device = await Device.findOne({
-        where: { device_id: idOrDeviceId },
         include: [{ model: DeviceRealtime, as: 'realtime' }]
       })
     }
@@ -259,12 +258,10 @@ router.get('/:id/track', async (req: Request, res: Response) => {
     const { startTime, endTime } = req.query
     const idOrDeviceId = req.params.id
 
-    // 查找设备
-    let device: any
-    if (/^\d+$/.test(idOrDeviceId)) {
+    // 查找设备 - 优先按device_id查找，如果没找到且是小数字则按主键查找
+    let device: any = await Device.findOne({ where: { device_id: idOrDeviceId } })
+    if (!device && /^\d+$/.test(idOrDeviceId) && Number(idOrDeviceId) < 100000) {
       device = await Device.findByPk(idOrDeviceId)
-    } else {
-      device = await Device.findOne({ where: { device_id: idOrDeviceId } })
     }
 
     if (!device) {
