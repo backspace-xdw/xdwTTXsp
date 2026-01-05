@@ -158,16 +158,30 @@
         <div class="video-section" v-if="playbackMode === 'video' || playbackMode === 'mixed'">
           <div class="video-grid" :class="videoGridClass">
             <div
-              v-for="(channel, index) in videoChannels"
+              v-for="(channel, index) in displayedChannels"
               :key="index"
               class="video-cell"
               :class="{ active: activeChannel === index }"
               @click="activeChannel = index"
             >
-              <div class="video-player">
+              <FlvPlayer
+                v-if="selectedVehicle && selectedVehicle.deviceId"
+                :device-id="selectedVehicle.deviceId"
+                :channel="channel.id"
+                :autoplay="true"
+                :muted="true"
+                :show-controls="true"
+                :show-channel-label="true"
+                :show-retry="true"
+                :offline-text="`${channel.name} - 未连接`"
+                @error="(err) => handleVideoError(channel.id, err)"
+                @connected="() => handleVideoConnected(channel.id)"
+              />
+              <div v-else class="video-player">
                 <div class="video-placeholder">
                   <el-icon><VideoCameraFilled /></el-icon>
                   <span>{{ channel.name }}</span>
+                  <span class="hint">请选择车辆</span>
                 </div>
                 <div class="video-label">CH{{ channel.id }}</div>
               </div>
@@ -463,6 +477,7 @@ import {
 import AMapLoader from '@amap/amap-jsapi-loader'
 import { ElMessage } from 'element-plus'
 import { getVehicles, getVehicleTrack, type VehicleData } from '@/api/vehicle'
+import FlvPlayer from '@/components/FlvPlayer.vue'
 
 const route = useRoute()
 
@@ -502,6 +517,26 @@ const videoGridClass = computed(() => {
   }
   return gridMap[videoGrid.value] || 'grid-2x2'
 })
+
+// 根据网格大小显示的通道
+const displayedChannels = computed(() => {
+  return videoChannels.value.slice(0, videoGrid.value)
+})
+
+// 视频连接状态
+const videoConnectionStatus = ref<Record<number, boolean>>({})
+
+// 视频错误处理
+const handleVideoError = (channel: number, error: string) => {
+  console.log(`[Replay] Video CH${channel} error:`, error)
+  videoConnectionStatus.value[channel] = false
+}
+
+// 视频连接成功
+const handleVideoConnected = (channel: number) => {
+  console.log(`[Replay] Video CH${channel} connected`)
+  videoConnectionStatus.value[channel] = true
+}
 
 const getGridIcon = (grid: number) => {
   const iconMap: Record<number, string> = {
@@ -1474,6 +1509,12 @@ onUnmounted(() => {
 
             span {
               font-size: 12px;
+            }
+
+            .hint {
+              font-size: 11px;
+              color: #999;
+              margin-top: 4px;
             }
           }
 

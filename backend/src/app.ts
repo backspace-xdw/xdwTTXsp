@@ -16,12 +16,16 @@ import companyRoutes from './routes/company'
 import alarmRoutes from './routes/alarm'
 import reportRoutes from './routes/report'
 import dashboardRoutes from './routes/dashboard'
+import streamRoutes from './routes/stream'
 
 // 导入WebSocket处理
 import { setupWebSocket, broadcastGpsUpdate, broadcastAlarm, broadcastDeviceStatus } from './websocket'
 
 // 导入JT808协议模块
 import { JT808Server, initJT808, STATUS_FLAG } from './jt808'
+
+// 导入JT1078视频流模块
+import { initJT1078, shutdownJT1078, getJT1078Server, getStreamManager } from './jt1078'
 
 // 导入服务层
 import { deviceService, locationService, alarmService } from './services'
@@ -54,6 +58,7 @@ app.use('/api/companies', companyRoutes)
 app.use('/api/alarms', alarmRoutes)
 app.use('/api/reports', reportRoutes)
 app.use('/api/dashboard', dashboardRoutes)
+app.use('/api/stream', streamRoutes)
 
 // 健康检查
 app.get('/api/health', (req, res) => {
@@ -246,6 +251,15 @@ async function startServer() {
       } catch (error) {
         console.error('[JT808] 启动失败:', error)
       }
+
+      // 初始化JT1078视频服务器
+      try {
+        const JT1078_PORT = parseInt(process.env.JT1078_PORT || '1078')
+        await initJT1078(JT1078_PORT)
+        console.log(`📹 JT1078 视频服务器已启动，端口: ${JT1078_PORT}`)
+      } catch (error) {
+        console.error('[JT1078] 启动失败:', error)
+      }
     })
   } catch (error) {
     console.error('Server startup failed:', error)
@@ -256,6 +270,7 @@ async function startServer() {
 // 优雅关闭
 process.on('SIGTERM', async () => {
   console.log('收到 SIGTERM 信号，正在关闭服务器...')
+  await shutdownJT1078()
   if (jt808Server) {
     await jt808Server.stop()
   }
@@ -267,6 +282,7 @@ process.on('SIGTERM', async () => {
 
 process.on('SIGINT', async () => {
   console.log('收到 SIGINT 信号，正在关闭服务器...')
+  await shutdownJT1078()
   if (jt808Server) {
     await jt808Server.stop()
   }
