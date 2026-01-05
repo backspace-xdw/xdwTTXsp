@@ -223,25 +223,19 @@
                 </el-dropdown>
               </div>
               <div class="video-content">
-                <!-- 模拟视频画面 -->
-                <div class="video-placeholder">
-                  <el-icon class="video-icon"><VideoCamera /></el-icon>
-                  <div class="video-status">
-                    <span v-if="window.status === 'connecting'" class="connecting">
-                      <el-icon class="is-loading"><Loading /></el-icon>
-                      连接中...
-                    </span>
-                    <span v-else-if="window.status === 'playing'" class="playing">
-                      <span class="live-dot"></span>
-                      实时视频
-                    </span>
-                    <span v-else class="offline">设备离线</span>
-                  </div>
-                  <div class="video-info-overlay">
-                    <span>{{ window.vehicle.plateNo }} - CH{{ window.channel }}</span>
-                    <span>{{ currentTime }}</span>
-                  </div>
-                </div>
+                <!-- 实时视频播放 -->
+                <FlvPlayer
+                  :device-id="window.vehicle.deviceId"
+                  :channel="window.channel"
+                  :autoplay="true"
+                  :muted="window.muted"
+                  :show-controls="true"
+                  :show-channel-label="false"
+                  :show-retry="true"
+                  @connected="() => handleVideoConnected(index)"
+                  @disconnected="() => handleVideoDisconnected(index)"
+                  @error="(err) => handleVideoError(index, err)"
+                />
               </div>
               <div class="video-footer">
                 <div class="video-stats">
@@ -580,6 +574,7 @@ import AMapLoader from '@amap/amap-jsapi-loader'
 import { useVehicleStore } from '@/stores/vehicle'
 import { getSocket } from '@/utils/websocket'
 import type { VehicleTreeNode } from '@/types'
+import FlvPlayer from '@/components/FlvPlayer.vue'
 
 const router = useRouter()
 const vehicleStore = useVehicleStore()
@@ -703,16 +698,7 @@ const addVehicleToVideoWindow = (vehicle: any, channel: number = 1) => {
     fps: 0
   }
 
-  // 模拟连接过程
-  setTimeout(() => {
-    if (videoWindows.value[targetIndex].vehicle?.id === vehicle.id) {
-      videoWindows.value[targetIndex].status = vehicle.online ? 'playing' : 'offline'
-      if (vehicle.online) {
-        videoWindows.value[targetIndex].bitrate = Math.floor(Math.random() * 1000) + 500
-        videoWindows.value[targetIndex].fps = 25
-      }
-    }
-  }, 1500)
+  // FlvPlayer will handle the real connection via events
 
   // 自动选择下一个空窗口
   const nextEmpty = videoWindows.value.findIndex((w, i) => i > targetIndex && !w.vehicle)
@@ -778,6 +764,25 @@ const toggleVideoMute = (index: number) => {
 // 切换播放
 const toggleVideoPlay = (index: number) => {
   videoWindows.value[index].playing = !videoWindows.value[index].playing
+}
+
+// FlvPlayer 事件处理
+const handleVideoConnected = (index: number) => {
+  console.log(`[Monitor] Video window ${index} connected`)
+  videoWindows.value[index].status = 'playing'
+  videoWindows.value[index].playing = true
+}
+
+const handleVideoDisconnected = (index: number) => {
+  console.log(`[Monitor] Video window ${index} disconnected`)
+  videoWindows.value[index].status = 'offline'
+  videoWindows.value[index].playing = false
+}
+
+const handleVideoError = (index: number, error: string) => {
+  console.log(`[Monitor] Video window ${index} error:`, error)
+  videoWindows.value[index].status = 'error'
+  videoWindows.value[index].playing = false
 }
 
 // 视频工具栏操作

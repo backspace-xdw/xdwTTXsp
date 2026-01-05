@@ -92,10 +92,17 @@
             <div class="video-wrapper">
               <!-- 视频播放区域 -->
               <div class="video-player">
-                <template v-if="cell.vehicle.online">
-                  <div class="video-stream">
-                    <el-icon class="video-icon"><VideoCamera /></el-icon>
-                  </div>
+                <!-- Show FlvPlayer if device has deviceId (even if offline for testing) -->
+                <template v-if="cell.vehicle.deviceId">
+                  <FlvPlayer
+                    :device-id="cell.vehicle.deviceId"
+                    :channel="cell.channel"
+                    :autoplay="true"
+                    :muted="true"
+                    :show-controls="false"
+                    :show-channel-label="false"
+                    class="flv-player-full"
+                  />
                   <!-- 实时标识 -->
                   <div class="live-badge">
                     <span class="live-dot"></span>
@@ -242,6 +249,8 @@ import {
   Van,
   Search
 } from '@element-plus/icons-vue'
+import FlvPlayer from '@/components/FlvPlayer.vue'
+import { getVehicles } from '@/api/vehicle'
 
 const router = useRouter()
 
@@ -307,51 +316,60 @@ const gridClass = computed(() => {
   }
 })
 
-// 模拟车辆树数据
-const vehicleTreeData = ref([
-  {
-    id: 'g1',
-    label: '金旅',
-    children: [
-      { id: 'v1', label: '沪A12345', plateNo: '沪A12345', online: true, speed: 65, driverName: '张三' },
-      { id: 'v2', label: '沪B67890', plateNo: '沪B67890', online: true, speed: 0, driverName: '李四' },
-      { id: 'v3', label: '沪C11111', plateNo: '沪C11111', online: false, speed: 0, driverName: '王五' },
-      { id: 'v4', label: '沪D22222', plateNo: '沪D22222', online: true, speed: 45, driverName: '赵六' }
-    ]
-  },
-  {
-    id: 'g2',
-    label: '本安测试部',
-    children: [
-      { id: 'v5', label: '京A11111', plateNo: '京A11111', online: true, speed: 50, driverName: '周九' },
-      { id: 'v6', label: '京B22222', plateNo: '京B22222', online: false, speed: 0, driverName: '吴十' }
-    ]
-  },
-  {
-    id: 'g3',
-    label: '山东四通',
-    children: [
-      { id: 'v7', label: '鲁A11111', plateNo: '鲁A11111', online: true, speed: 35, driverName: '郑一' },
-      { id: 'v8', label: '鲁B22222', plateNo: '鲁B22222', online: true, speed: 70, driverName: '王二' }
-    ]
-  },
-  {
-    id: 'g4',
-    label: '广州分公司',
-    children: [
-      { id: 'v9', label: '粤A11111', plateNo: '粤A11111', online: true, speed: 55, driverName: '陈三' },
-      { id: 'v10', label: '粤A22222', plateNo: '粤A22222', online: false, speed: 0, driverName: '林四' }
-    ]
-  },
-  {
-    id: 'g5',
-    label: '深圳分公司',
-    children: [
-      { id: 'v11', label: '粤B11111', plateNo: '粤B11111', online: true, speed: 80, driverName: '刘六' },
-      { id: 'v12', label: '粤B22222', plateNo: '粤B22222', online: true, speed: 60, driverName: '张七' }
+// 车辆树数据 - 从API加载
+const vehicleTreeData = ref<any[]>([])
+
+// 加载车辆数据
+const loadVehicles = async () => {
+  try {
+    const res = await getVehicles()
+    if ((res.code === 0 || res.code === 200) && res.data) {
+      const vehicleList = res.data.list || res.data
+      // 按公司分组
+      const companyMap = new Map<string, any[]>()
+      vehicleList.forEach((v: any) => {
+        const companyName = v.companyName || '监控中心'
+        if (!companyMap.has(companyName)) {
+          companyMap.set(companyName, [])
+        }
+        companyMap.get(companyName)!.push({
+          id: `v${v.id}`,
+          label: v.plateNo,
+          plateNo: v.plateNo,
+          deviceId: v.deviceId,
+          online: v.online,
+          speed: v.speed || 0,
+          driverName: v.driverName || ''
+        })
+      })
+
+      // 转换为树形结构
+      const treeData: any[] = []
+      let groupIndex = 1
+      companyMap.forEach((vehicles, companyName) => {
+        treeData.push({
+          id: `g${groupIndex++}`,
+          label: companyName,
+          children: vehicles
+        })
+      })
+      vehicleTreeData.value = treeData
+      console.log('[GroupMon] Loaded vehicles:', treeData)
+    }
+  } catch (error) {
+    console.error('[GroupMon] Failed to load vehicles:', error)
+    // Fallback to mock data
+    vehicleTreeData.value = [
+      {
+        id: 'g1',
+        label: '监控中心',
+        children: [
+          { id: 'v1', label: '京A12345', plateNo: '京A12345', deviceId: '013912345678', online: true, speed: 65, driverName: '张三' }
+        ]
+      }
     ]
   }
-])
+}
 
 // 设置网格布局
 const setGridLayout = (layout: number) => {
@@ -487,6 +505,7 @@ const updateTime = () => {
 
 onMounted(() => {
   loadLayout()
+  loadVehicles()
   updateTime()
   timeTimer = setInterval(updateTime, 1000)
 })
@@ -706,9 +725,30 @@ onUnmounted(() => {
     justify-content: center;
 
     .video-stream {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+
       .video-icon {
         font-size: 48px;
         color: rgba(255, 255, 255, 0.3);
+      }
+
+      .no-device {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 12px;
+      }
+    }
+
+    .flv-player-full {
+      width: 100%;
+      height: 100%;
+
+      :deep(video) {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
       }
     }
 
