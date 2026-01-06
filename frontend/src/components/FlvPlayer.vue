@@ -294,6 +294,43 @@ onBeforeUnmount(() => {
   disconnect()
 })
 
+// 截图功能
+function captureScreenshot(): string | null {
+  if (!videoRef.value || !isConnected.value) {
+    return null
+  }
+
+  const video = videoRef.value
+  const canvas = document.createElement('canvas')
+  canvas.width = video.videoWidth || video.clientWidth
+  canvas.height = video.videoHeight || video.clientHeight
+
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+  return canvas.toDataURL('image/png')
+}
+
+// 下载截图
+function downloadScreenshot(filename?: string): boolean {
+  const dataUrl = captureScreenshot()
+  if (!dataUrl) return false
+
+  const link = document.createElement('a')
+  link.href = dataUrl
+  link.download = filename || `screenshot_${props.deviceId}_CH${props.channel}_${Date.now()}.png`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  return true
+}
+
+// 获取视频元素
+function getVideoElement(): HTMLVideoElement | undefined {
+  return videoRef.value
+}
+
 // 暴露方法
 defineExpose({
   connect,
@@ -302,6 +339,9 @@ defineExpose({
   pause,
   isPlaying,
   isConnected,
+  captureScreenshot,
+  downloadScreenshot,
+  getVideoElement,
 })
 </script>
 

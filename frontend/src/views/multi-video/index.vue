@@ -77,6 +77,7 @@
               <div class="video-wrapper">
                 <FlvPlayer
                   v-if="cell.vehicle.deviceId"
+                  :ref="(el: any) => setPlayerRef(index, el)"
                   :device-id="cell.vehicle.deviceId"
                   :channel="cell.channel"
                   :autoplay="true"
@@ -192,6 +193,17 @@ interface GridCell {
 }
 
 const gridCells = ref<GridCell[]>([])
+
+// Player refs for screenshot/control
+const playerRefs = ref<Map<number, any>>(new Map())
+
+const setPlayerRef = (index: number, el: any) => {
+  if (el) {
+    playerRefs.value.set(index, el)
+  } else {
+    playerRefs.value.delete(index)
+  }
+}
 
 // 车辆树数据
 const vehicleTreeData = ref<any[]>([])
@@ -323,12 +335,49 @@ const removeVideo = (index: number) => {
 
 // 截图
 const screenshot = (index: number) => {
-  ElMessage.info(`窗口 ${index + 1} 截图`)
+  const player = playerRefs.value.get(index)
+  if (player && player.downloadScreenshot) {
+    const cell = gridCells.value[index]
+    const filename = `screenshot_${cell.vehicle?.plateNo || 'unknown'}_CH${cell.channel}_${Date.now()}.png`
+    const success = player.downloadScreenshot(filename)
+    if (success) {
+      ElMessage.success(`窗口 ${index + 1} 截图已保存`)
+    } else {
+      ElMessage.warning(`窗口 ${index + 1} 截图失败，视频可能未连接`)
+    }
+  } else {
+    ElMessage.warning(`窗口 ${index + 1} 无可用视频`)
+  }
 }
 
 // 全部截图
 const screenshotAll = () => {
-  ElMessage.info('全部截图')
+  let successCount = 0
+  let failCount = 0
+
+  gridCells.value.forEach((cell, index) => {
+    if (cell.vehicle) {
+      const player = playerRefs.value.get(index)
+      if (player && player.downloadScreenshot) {
+        const filename = `screenshot_${cell.vehicle?.plateNo || 'unknown'}_CH${cell.channel}_${Date.now()}.png`
+        if (player.downloadScreenshot(filename)) {
+          successCount++
+        } else {
+          failCount++
+        }
+      } else {
+        failCount++
+      }
+    }
+  })
+
+  if (successCount > 0) {
+    ElMessage.success(`已保存 ${successCount} 张截图${failCount > 0 ? `，${failCount} 张失败` : ''}`)
+  } else if (failCount > 0) {
+    ElMessage.warning('截图失败，请确保视频已连接')
+  } else {
+    ElMessage.warning('没有可用的视频')
+  }
 }
 
 // 录像
