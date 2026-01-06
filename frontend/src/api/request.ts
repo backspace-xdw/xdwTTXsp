@@ -3,9 +3,17 @@ import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 
+// 动态获取API基础URL
+const getApiBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL
+  if (envUrl) return envUrl
+  // 自动检测: 使用当前host + 后端端口
+  return `${window.location.protocol}//${window.location.hostname}:8081/api`
+}
+
 // 创建axios实例
 const service: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  baseURL: getApiBaseUrl(),
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
