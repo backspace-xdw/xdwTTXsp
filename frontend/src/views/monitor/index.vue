@@ -677,7 +677,7 @@ const selectVideoWindow = (index: number) => {
 // 双击视频窗口
 const handleVideoWindowDblClick = (index: number) => {
   const window = videoWindows.value[index]
-  if (window.vehicle) {
+  if (window?.vehicle) {
     // 全屏播放
     handleVideoFullscreen(index)
   }
@@ -746,7 +746,7 @@ const handleVideoFullscreen = (index: number) => {
 // 视频截图
 const handleVideoScreenshot = (index: number) => {
   const window = videoWindows.value[index]
-  if (window.vehicle) {
+  if (window?.vehicle) {
     console.log('截图:', window.vehicle.plateNo)
   }
 }
@@ -758,31 +758,42 @@ const handleVideoRecord = (index: number) => {
 
 // 切换静音
 const toggleVideoMute = (index: number) => {
-  videoWindows.value[index].muted = !videoWindows.value[index].muted
+  const window = videoWindows.value[index]
+  if (window) window.muted = !window.muted
 }
 
 // 切换播放
 const toggleVideoPlay = (index: number) => {
-  videoWindows.value[index].playing = !videoWindows.value[index].playing
+  const window = videoWindows.value[index]
+  if (window) window.playing = !window.playing
 }
 
 // FlvPlayer 事件处理
 const handleVideoConnected = (index: number) => {
   console.log(`[Monitor] Video window ${index} connected`)
-  videoWindows.value[index].status = 'playing'
-  videoWindows.value[index].playing = true
+  const window = videoWindows.value[index]
+  if (window) {
+    window.status = 'playing'
+    window.playing = true
+  }
 }
 
 const handleVideoDisconnected = (index: number) => {
   console.log(`[Monitor] Video window ${index} disconnected`)
-  videoWindows.value[index].status = 'offline'
-  videoWindows.value[index].playing = false
+  const window = videoWindows.value[index]
+  if (window) {
+    window.status = 'offline'
+    window.playing = false
+  }
 }
 
 const handleVideoError = (index: number, error: string) => {
   console.log(`[Monitor] Video window ${index} error:`, error)
-  videoWindows.value[index].status = 'error'
-  videoWindows.value[index].playing = false
+  const window = videoWindows.value[index]
+  if (window) {
+    window.status = 'offline'
+    window.playing = false
+  }
 }
 
 // 视频工具栏操作

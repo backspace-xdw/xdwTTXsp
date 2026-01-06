@@ -782,7 +782,7 @@ function getDirection(angle: number | undefined): string {
   if (angle === undefined) return '-'
   const directions = ['北', '东北', '东', '东南', '南', '西南', '西', '西北']
   const index = Math.round(angle / 45) % 8
-  return directions[index]
+  return directions[index] || '-'
 }
 
 // 获取速度标签类型

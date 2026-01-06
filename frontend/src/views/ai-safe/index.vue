@@ -391,7 +391,7 @@ const generateMockData = () => {
   // 按风险等级排序
   mockData.sort((a, b) => {
     const order: Record<string, number> = { high: 0, medium: 1, low: 2 }
-    return order[a.riskLevel] - order[b.riskLevel]
+    return (order[a.riskLevel] ?? 3) - (order[b.riskLevel] ?? 3)
   })
 
   alarmList.value = mockData

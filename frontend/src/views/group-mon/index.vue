@@ -296,8 +296,9 @@ const initGrid = (size: number) => {
   const newCells: GridCell[] = []
   for (let i = 0; i < size; i++) {
     // 保留已有数据
-    if (gridCells.value[i]) {
-      newCells.push(gridCells.value[i])
+    const existingCell = gridCells.value[i]
+    if (existingCell) {
+      newCells.push(existingCell)
     } else {
       newCells.push({ vehicle: null, channel: 1 })
     }
@@ -463,13 +464,15 @@ const confirmAddVehicle = () => {
 // 切换通道
 const switchChannel = (index: number) => {
   currentChannelIndex.value = index
-  tempChannel.value = gridCells.value[index].channel
+  const cell = gridCells.value[index]
+  if (cell) tempChannel.value = cell.channel
   channelDialogVisible.value = true
 }
 
 // 确认切换通道
 const confirmSwitchChannel = () => {
-  gridCells.value[currentChannelIndex.value].channel = tempChannel.value
+  const cell = gridCells.value[currentChannelIndex.value]
+  if (cell) cell.channel = tempChannel.value
   channelDialogVisible.value = false
   ElMessage.success(`已切换到通道${tempChannel.value}`)
 }
@@ -486,7 +489,7 @@ const locateVehicle = (vehicle: any) => {
 const fullscreenCell = (index: number) => {
   // 临时切换到1x1布局显示该车辆
   const cell = gridCells.value[index]
-  if (cell.vehicle) {
+  if (cell?.vehicle) {
     setGridLayout(1)
     gridCells.value[0] = cell
   }
@@ -494,7 +497,9 @@ const fullscreenCell = (index: number) => {
 
 // 移除车辆
 const removeVehicle = (index: number) => {
-  gridCells.value[index] = { vehicle: null, channel: 1 }
+  if (gridCells.value[index]) {
+    gridCells.value[index] = { vehicle: null, channel: 1 }
+  }
 }
 
 // 更新时间

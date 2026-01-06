@@ -223,8 +223,9 @@ const activeCount = computed(() => gridCells.value.filter(c => c.vehicle).length
 const initGrid = (size: number) => {
   const newCells: GridCell[] = []
   for (let i = 0; i < size; i++) {
-    if (gridCells.value[i]) {
-      newCells.push(gridCells.value[i])
+    const existingCell = gridCells.value[i]
+    if (existingCell) {
+      newCells.push(existingCell)
     } else {
       newCells.push({ vehicle: null, channel: 1, muted: true, recording: false })
     }
@@ -310,7 +311,8 @@ const confirmAddVideo = () => {
 
   // 找到第一个空单元格或选中的单元格
   let targetIndex = selectedIndex.value
-  if (targetIndex === null || gridCells.value[targetIndex].vehicle) {
+  const selectedCell = targetIndex !== null ? gridCells.value[targetIndex] : null
+  if (targetIndex === null || selectedCell?.vehicle) {
     targetIndex = gridCells.value.findIndex(c => !c.vehicle)
   }
 
@@ -344,8 +346,8 @@ const removeVideo = (index: number) => {
 // 截图
 const screenshot = (index: number) => {
   const player = playerRefs.value.get(index)
-  if (player && player.downloadScreenshot) {
-    const cell = gridCells.value[index]
+  const cell = gridCells.value[index]
+  if (player && player.downloadScreenshot && cell) {
     const filename = `screenshot_${cell.vehicle?.plateNo || 'unknown'}_CH${cell.channel}_${Date.now()}.png`
     const success = player.downloadScreenshot(filename)
     if (success) {
@@ -393,7 +395,7 @@ const toggleRecord = (index: number) => {
   const player = playerRefs.value.get(index)
   const cell = gridCells.value[index]
 
-  if (!player) {
+  if (!player || !cell) {
     ElMessage.warning(`窗口 ${index + 1} 无可用视频`)
     return
   }
@@ -465,13 +467,14 @@ const recordAll = () => {
 
 // 静音
 const toggleMute = (index: number) => {
-  gridCells.value[index].muted = !gridCells.value[index].muted
+  const cell = gridCells.value[index]
+  if (cell) cell.muted = !cell.muted
 }
 
 // 单元格全屏
 const fullscreenCell = (index: number) => {
   const cell = gridCells.value[index]
-  if (cell.vehicle) {
+  if (cell?.vehicle) {
     setLayout(1)
     gridCells.value[0] = cell
   }
