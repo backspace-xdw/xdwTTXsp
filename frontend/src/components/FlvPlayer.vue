@@ -130,7 +130,7 @@ const channelName = computed(() => CHANNEL_NAMES[props.channel] || `通道${prop
 
 // 构建流URL
 const streamUrl = computed(() => {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
+  const baseUrl = import.meta.env.VITE_STREAM_BASE_URL || import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || ''
   return `${baseUrl}/api/stream/${props.deviceId}/${props.channel}`
 })
 
