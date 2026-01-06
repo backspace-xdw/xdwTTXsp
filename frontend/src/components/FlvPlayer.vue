@@ -128,13 +128,9 @@ const recordingStartTime = ref<number>(0)
 
 const channelName = computed(() => CHANNEL_NAMES[props.channel] || `通道${props.channel}`)
 
-// 构建流URL - 需要连接到后端端口8081
+// 构建流URL - 使用相对路径，通过nginx代理
 const streamUrl = computed(() => {
-  let baseUrl = import.meta.env.VITE_STREAM_BASE_URL
-  if (!baseUrl) {
-    // 使用当前host但指向后端端口
-    baseUrl = `${window.location.protocol}//${window.location.hostname}:8081`
-  }
+  const baseUrl = import.meta.env.VITE_STREAM_BASE_URL || ''
   return `${baseUrl}/api/stream/${props.deviceId}/${props.channel}`
 })
 

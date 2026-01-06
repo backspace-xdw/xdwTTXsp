@@ -7,8 +7,8 @@ import router from '@/router'
 const getApiBaseUrl = () => {
   const envUrl = import.meta.env.VITE_API_BASE_URL
   if (envUrl) return envUrl
-  // 自动检测: 使用当前host + 后端端口
-  return `${window.location.protocol}//${window.location.hostname}:8081/api`
+  // 使用相对路径，通过nginx代理访问后端
+  return '/api'
 }
 
 // 创建axios实例

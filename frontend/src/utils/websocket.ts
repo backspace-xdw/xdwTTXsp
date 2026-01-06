@@ -6,8 +6,8 @@
 import { io, Socket } from 'socket.io-client'
 import { useVehicleStore } from '@/stores/vehicle'
 
-// WebSocket服务端地址 - 空值表示使用当前页面host
-const WS_URL = import.meta.env.VITE_WS_URL || `${window.location.protocol}//${window.location.hostname}:8081`
+// WebSocket服务端地址 - 使用当前页面origin，通过nginx代理
+const WS_URL = import.meta.env.VITE_WS_URL || window.location.origin
 
 let socket: Socket | null = null
 

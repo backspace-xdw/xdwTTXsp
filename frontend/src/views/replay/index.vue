@@ -478,6 +478,7 @@ import AMapLoader from '@amap/amap-jsapi-loader'
 import { ElMessage } from 'element-plus'
 import { getVehicles, getVehicleTrack, type VehicleData } from '@/api/vehicle'
 import FlvPlayer from '@/components/FlvPlayer.vue'
+import carMarkerIcon from '@/assets/images/car-marker.svg'
 
 const route = useRoute()
 
@@ -1012,15 +1013,15 @@ function drawTrack() {
   })
   map.add(passedPolyline)
 
-  // 创建车辆标记
+  // 创建车辆标记 - 使用车辆图标
   marker = new AMapInstance.Marker({
     position: path[0],
     icon: new AMapInstance.Icon({
-      size: new AMapInstance.Size(40, 40),
-      image: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png',
-      imageSize: new AMapInstance.Size(40, 40)
+      size: new AMapInstance.Size(48, 48),
+      image: carMarkerIcon,
+      imageSize: new AMapInstance.Size(48, 48)
     }),
-    offset: new AMapInstance.Pixel(-20, -40),
+    offset: new AMapInstance.Pixel(-24, -24),
     angle: trackData.value[0].direction || 0
   })
   map.add(marker)
