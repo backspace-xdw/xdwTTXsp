@@ -26,6 +26,8 @@ export interface SimulatorConfig {
   frameRate: number    // 帧率 (fps)
   bitrate: number      // 比特率 (kbps)
   duration: number     // 持续时间 (秒), 0=无限
+  videoFile: string    // H.264视频文件路径
+  loop: boolean        // 是否循环播放
 }
 
 const DEFAULT_CONFIG: SimulatorConfig = {
@@ -36,6 +38,8 @@ const DEFAULT_CONFIG: SimulatorConfig = {
   frameRate: 25,
   bitrate: 1024,
   duration: 0,
+  videoFile: '',
+  loop: true,
 }
 
 /**
@@ -120,6 +124,74 @@ function generateColorBarsFrame(width: number, height: number, frameNum: number,
 }
 
 /**
+ * 解析 H.264 文件中的 NAL 单元
+ */
+function parseNALUnits(buffer: Buffer): Buffer[] {
+  const nalUnits: Buffer[] = []
+  let i = 0
+
+  while (i < buffer.length - 4) {
+    // 查找起始码 0x00000001 或 0x000001
+    if (buffer[i] === 0 && buffer[i + 1] === 0) {
+      let startCodeLen = 0
+      if (buffer[i + 2] === 0 && buffer[i + 3] === 1) {
+        startCodeLen = 4
+      } else if (buffer[i + 2] === 1) {
+        startCodeLen = 3
+      }
+
+      if (startCodeLen > 0) {
+        // 找到下一个起始码
+        let nextStart = i + startCodeLen
+        while (nextStart < buffer.length - 3) {
+          if (buffer[nextStart] === 0 && buffer[nextStart + 1] === 0) {
+            if ((buffer[nextStart + 2] === 0 && buffer[nextStart + 3] === 1) ||
+                buffer[nextStart + 2] === 1) {
+              break
+            }
+          }
+          nextStart++
+        }
+
+        if (nextStart >= buffer.length - 3) {
+          nextStart = buffer.length
+        }
+
+        // 提取 NAL 单元 (包含起始码)
+        const nalUnit = buffer.slice(i, nextStart)
+        nalUnits.push(nalUnit)
+        i = nextStart
+        continue
+      }
+    }
+    i++
+  }
+
+  return nalUnits
+}
+
+/**
+ * 判断 NAL 单元类型
+ */
+function getNALType(nalUnit: Buffer): { type: number; isKeyFrame: boolean } {
+  // 跳过起始码找到 NAL header
+  let offset = 0
+  if (nalUnit[0] === 0 && nalUnit[1] === 0 && nalUnit[2] === 0 && nalUnit[3] === 1) {
+    offset = 4
+  } else if (nalUnit[0] === 0 && nalUnit[1] === 0 && nalUnit[2] === 1) {
+    offset = 3
+  }
+
+  const nalHeader = nalUnit[offset]
+  const nalType = nalHeader & 0x1f
+
+  // NAL 类型: 5=IDR, 7=SPS, 8=PPS
+  const isKeyFrame = nalType === 5 || nalType === 7 || nalType === 8
+
+  return { type: nalType, isKeyFrame }
+}
+
+/**
  * JT1078 模拟器
  */
 export class JT1078Simulator {
@@ -131,8 +203,52 @@ export class JT1078Simulator {
   private frameTimer: NodeJS.Timeout | null = null
   private gopSize: number = 25 // I帧间隔 (GOP)
 
+  // 视频文件相关
+  private videoNALUnits: Buffer[] = []
+  private currentNALIndex: number = 0
+  private useRealVideo: boolean = false
+
   constructor(config: Partial<SimulatorConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config }
+
+    // 加载视频文件
+    if (this.config.videoFile) {
+      this.loadVideoFile(this.config.videoFile)
+    }
+  }
+
+  /**
+   * 加载 H.264 视频文件
+   */
+  private loadVideoFile(filePath: string): void {
+    try {
+      const fullPath = path.resolve(filePath)
+      console.log(`[Simulator] Loading video file: ${fullPath}`)
+
+      if (!fs.existsSync(fullPath)) {
+        console.error(`[Simulator] Video file not found: ${fullPath}`)
+        return
+      }
+
+      const buffer = fs.readFileSync(fullPath)
+      console.log(`[Simulator] File size: ${(buffer.length / 1024).toFixed(2)} KB`)
+
+      this.videoNALUnits = parseNALUnits(buffer)
+      console.log(`[Simulator] Parsed ${this.videoNALUnits.length} NAL units`)
+
+      if (this.videoNALUnits.length > 0) {
+        this.useRealVideo = true
+        console.log('[Simulator] Using real video data')
+
+        // 打印前几个 NAL 单元类型
+        for (let i = 0; i < Math.min(10, this.videoNALUnits.length); i++) {
+          const { type, isKeyFrame } = getNALType(this.videoNALUnits[i])
+          console.log(`  NAL[${i}]: type=${type}, size=${this.videoNALUnits[i].length}, keyframe=${isKeyFrame}`)
+        }
+      }
+    } catch (err) {
+      console.error('[Simulator] Failed to load video file:', err)
+    }
   }
 
   /**
@@ -232,12 +348,37 @@ export class JT1078Simulator {
       return
     }
 
-    // 确定帧类型 (每 gopSize 帧发送一个 I 帧)
-    const isKeyFrame = this.frameCount % this.gopSize === 0
-    const dataType = isKeyFrame ? DATA_TYPE.I_FRAME : DATA_TYPE.P_FRAME
+    let frameData: Buffer
+    let isKeyFrame: boolean
+    let dataType: number
 
-    // 生成帧数据
-    const frameData = generateColorBarsFrame(640, 480, this.frameCount, isKeyFrame)
+    if (this.useRealVideo && this.videoNALUnits.length > 0) {
+      // 使用真实视频数据
+      const nalUnit = this.videoNALUnits[this.currentNALIndex]
+      const nalInfo = getNALType(nalUnit)
+
+      frameData = nalUnit
+      isKeyFrame = nalInfo.isKeyFrame
+      dataType = isKeyFrame ? DATA_TYPE.I_FRAME : DATA_TYPE.P_FRAME
+
+      // 移动到下一个 NAL 单元
+      this.currentNALIndex++
+      if (this.currentNALIndex >= this.videoNALUnits.length) {
+        if (this.config.loop) {
+          this.currentNALIndex = 0
+          console.log('[Simulator] Video loop - restarting from beginning')
+        } else {
+          console.log('[Simulator] Video ended')
+          this.stop()
+          return
+        }
+      }
+    } else {
+      // 使用模拟数据
+      isKeyFrame = this.frameCount % this.gopSize === 0
+      dataType = isKeyFrame ? DATA_TYPE.I_FRAME : DATA_TYPE.P_FRAME
+      frameData = generateColorBarsFrame(640, 480, this.frameCount, isKeyFrame)
+    }
 
     // 时间戳 (毫秒)
     const timestamp = BigInt(Date.now())
@@ -267,9 +408,10 @@ export class JT1078Simulator {
     // 每秒打印一次状态
     if (this.frameCount % this.config.frameRate === 0) {
       const seconds = Math.floor(this.frameCount / this.config.frameRate)
+      const mode = this.useRealVideo ? 'real' : 'simulated'
       console.log(
         `[Simulator] ${seconds}s: Sent ${this.frameCount} frames ` +
-        `(${isKeyFrame ? 'I' : 'P'}-frame, ${frameData.length} bytes)`
+        `(${isKeyFrame ? 'I' : 'P'}-frame, ${frameData.length} bytes, ${mode})`
       )
     }
   }
@@ -327,6 +469,13 @@ async function main(): Promise<void> {
       case '-t':
         config.duration = parseInt(args[++i], 10)
         break
+      case '--video':
+      case '-v':
+        config.videoFile = args[++i]
+        break
+      case '--no-loop':
+        config.loop = false
+        break
       case '--help':
         console.log(`
 JT1078 Video Simulator
@@ -340,10 +489,13 @@ Options:
   --channel, -c   Channel number (default: 1)
   --fps, -f       Frame rate (default: 25)
   --duration, -t  Duration in seconds, 0=infinite (default: 0)
+  --video, -v     H.264 video file path (uses real video data)
+  --no-loop       Don't loop video (default: loop enabled)
   --help          Show this help
 
 Example:
   npx ts-node src/jt1078/simulator.ts -d 013900000001 -c 1 -f 15 -t 60
+  npx ts-node src/jt1078/simulator.ts -v test-videos/test-video.h264
 `)
         process.exit(0)
     }
