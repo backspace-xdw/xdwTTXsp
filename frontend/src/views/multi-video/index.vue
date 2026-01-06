@@ -56,7 +56,9 @@
         </div>
         <div class="toolbar-right">
           <el-button size="small" :icon="Camera" @click="screenshotAll">全部截图</el-button>
-          <el-button size="small" :icon="VideoCamera" @click="recordAll">全部录像</el-button>
+          <el-button size="small" :icon="VideoCamera" :type="isRecordingAll ? 'danger' : 'default'" @click="recordAll">
+            {{ isRecordingAll ? '停止录像' : '全部录像' }}
+          </el-button>
           <el-button size="small" :icon="FullScreen" @click="toggleFullscreen">全屏</el-button>
           <el-button size="small" :icon="Delete" @click="clearAll">清空</el-button>
         </div>
@@ -90,6 +92,12 @@
                   <span>无设备ID</span>
                 </div>
 
+                <!-- 录像指示器 -->
+                <div v-if="cell.recording" class="recording-indicator">
+                  <span class="rec-dot"></span>
+                  <span class="rec-text">REC</span>
+                </div>
+
                 <!-- 视频信息覆盖 -->
                 <div class="video-overlay">
                   <div class="overlay-top">
@@ -104,7 +112,7 @@
                 <!-- 悬停控制 -->
                 <div class="video-controls">
                   <el-button size="small" :icon="Camera" circle @click.stop="screenshot(index)" />
-                  <el-button size="small" :icon="VideoCamera" circle @click.stop="toggleRecord(index)" />
+                  <el-button size="small" :icon="VideoCamera" :type="cell.recording ? 'danger' : 'default'" circle @click.stop="toggleRecord(index)" />
                   <el-button size="small" :icon="cell.muted ? Mute : Microphone" circle @click.stop="toggleMute(index)" />
                   <el-button size="small" :icon="FullScreen" circle @click.stop="fullscreenCell(index)" />
                   <el-button size="small" :icon="Close" circle @click.stop="removeVideo(index)" />
@@ -382,13 +390,77 @@ const screenshotAll = () => {
 
 // 录像
 const toggleRecord = (index: number) => {
-  gridCells.value[index].recording = !gridCells.value[index].recording
-  ElMessage.info(gridCells.value[index].recording ? '开始录像' : '停止录像')
+  const player = playerRefs.value.get(index)
+  const cell = gridCells.value[index]
+
+  if (!player) {
+    ElMessage.warning(`窗口 ${index + 1} 无可用视频`)
+    return
+  }
+
+  if (cell.recording) {
+    // 停止录像
+    player.stopRecording(true) // 自动下载
+    cell.recording = false
+    ElMessage.success(`窗口 ${index + 1} 录像已保存`)
+  } else {
+    // 开始录像
+    if (player.startRecording()) {
+      cell.recording = true
+      ElMessage.success(`窗口 ${index + 1} 开始录像`)
+    } else {
+      ElMessage.warning(`窗口 ${index + 1} 录像失败，视频可能未连接`)
+    }
+  }
 }
 
 // 全部录像
+const isRecordingAll = ref(false)
+
 const recordAll = () => {
-  ElMessage.info('全部录像')
+  if (isRecordingAll.value) {
+    // 停止所有录像
+    let stoppedCount = 0
+    gridCells.value.forEach((cell, index) => {
+      if (cell.recording) {
+        const player = playerRefs.value.get(index)
+        if (player) {
+          player.stopRecording(true)
+          cell.recording = false
+          stoppedCount++
+        }
+      }
+    })
+    isRecordingAll.value = false
+    if (stoppedCount > 0) {
+      ElMessage.success(`已停止 ${stoppedCount} 个录像并保存`)
+    } else {
+      ElMessage.info('没有正在进行的录像')
+    }
+  } else {
+    // 开始所有录像
+    let startedCount = 0
+    let failedCount = 0
+    gridCells.value.forEach((cell, index) => {
+      if (cell.vehicle && !cell.recording) {
+        const player = playerRefs.value.get(index)
+        if (player && player.startRecording()) {
+          cell.recording = true
+          startedCount++
+        } else {
+          failedCount++
+        }
+      }
+    })
+    if (startedCount > 0) {
+      isRecordingAll.value = true
+      ElMessage.success(`已开始 ${startedCount} 个录像${failedCount > 0 ? `，${failedCount} 个失败` : ''}`)
+    } else if (failedCount > 0) {
+      ElMessage.warning('录像失败，请确保视频已连接')
+    } else {
+      ElMessage.warning('没有可用的视频')
+    }
+  }
 }
 
 // 静音
@@ -633,6 +705,38 @@ onUnmounted(() => {
   &:hover .video-controls {
     opacity: 1;
   }
+
+  .recording-indicator {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
+    z-index: 10;
+
+    .rec-dot {
+      width: 10px;
+      height: 10px;
+      background: #f56c6c;
+      border-radius: 50%;
+      animation: blink 1s infinite;
+    }
+
+    .rec-text {
+      color: #f56c6c;
+      font-size: 12px;
+      font-weight: bold;
+    }
+  }
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
 }
 
 .empty-cell {

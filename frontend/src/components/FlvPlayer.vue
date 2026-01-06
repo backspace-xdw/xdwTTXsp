@@ -120,6 +120,12 @@ const isConnected = ref(false)
 const error = ref<string | null>(null)
 const muted = ref(props.muted)
 
+// 录像状态
+const isRecording = ref(false)
+const mediaRecorder = ref<MediaRecorder | null>(null)
+const recordedChunks = ref<Blob[]>([])
+const recordingStartTime = ref<number>(0)
+
 const channelName = computed(() => CHANNEL_NAMES[props.channel] || `通道${props.channel}`)
 
 // 构建流URL
@@ -331,6 +337,130 @@ function getVideoElement(): HTMLVideoElement | undefined {
   return videoRef.value
 }
 
+// 开始录像
+function startRecording(): boolean {
+  if (!videoRef.value || !isConnected.value) {
+    console.warn('[FlvPlayer] Cannot start recording: video not connected')
+    return false
+  }
+
+  if (isRecording.value) {
+    console.warn('[FlvPlayer] Already recording')
+    return false
+  }
+
+  try {
+    // 获取视频流
+    const video = videoRef.value
+    const stream = (video as any).captureStream ? (video as any).captureStream(30) : null
+
+    if (!stream) {
+      console.error('[FlvPlayer] captureStream not supported')
+      return false
+    }
+
+    // 检查 MediaRecorder 支持
+    if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+      if (!MediaRecorder.isTypeSupported('video/webm')) {
+        console.error('[FlvPlayer] MediaRecorder WebM not supported')
+        return false
+      }
+    }
+
+    // 确定最佳编码格式
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9'
+      : 'video/webm'
+
+    // 创建 MediaRecorder
+    recordedChunks.value = []
+    mediaRecorder.value = new MediaRecorder(stream, {
+      mimeType,
+      videoBitsPerSecond: 2500000, // 2.5 Mbps
+    })
+
+    mediaRecorder.value.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        recordedChunks.value.push(event.data)
+      }
+    }
+
+    mediaRecorder.value.onstop = () => {
+      console.log(`[FlvPlayer] Recording stopped, ${recordedChunks.value.length} chunks`)
+    }
+
+    mediaRecorder.value.onerror = (event) => {
+      console.error('[FlvPlayer] MediaRecorder error:', event)
+      isRecording.value = false
+    }
+
+    // 开始录制
+    mediaRecorder.value.start(1000) // 每秒收集一次数据
+    recordingStartTime.value = Date.now()
+    isRecording.value = true
+
+    console.log(`[FlvPlayer] Recording started for ${props.deviceId}:${props.channel}`)
+    return true
+  } catch (err) {
+    console.error('[FlvPlayer] Failed to start recording:', err)
+    return false
+  }
+}
+
+// 停止录像并下载
+function stopRecording(download: boolean = true): Blob | null {
+  if (!mediaRecorder.value || !isRecording.value) {
+    console.warn('[FlvPlayer] Not recording')
+    return null
+  }
+
+  return new Promise<Blob | null>((resolve) => {
+    const recorder = mediaRecorder.value!
+
+    recorder.onstop = () => {
+      isRecording.value = false
+
+      if (recordedChunks.value.length === 0) {
+        console.warn('[FlvPlayer] No recorded data')
+        resolve(null)
+        return
+      }
+
+      // 创建 Blob
+      const blob = new Blob(recordedChunks.value, { type: 'video/webm' })
+      const duration = Math.floor((Date.now() - recordingStartTime.value) / 1000)
+
+      console.log(`[FlvPlayer] Recording complete: ${(blob.size / 1024 / 1024).toFixed(2)} MB, ${duration}s`)
+
+      // 下载文件
+      if (download) {
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `recording_${props.deviceId}_CH${props.channel}_${Date.now()}.webm`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+      }
+
+      // 清理
+      recordedChunks.value = []
+      mediaRecorder.value = null
+
+      resolve(blob)
+    }
+
+    recorder.stop()
+  }) as any // TypeScript workaround for sync return
+}
+
+// 获取录像时长 (秒)
+function getRecordingDuration(): number {
+  if (!isRecording.value) return 0
+  return Math.floor((Date.now() - recordingStartTime.value) / 1000)
+}
+
 // 暴露方法
 defineExpose({
   connect,
@@ -342,6 +472,11 @@ defineExpose({
   captureScreenshot,
   downloadScreenshot,
   getVideoElement,
+  // 录像功能
+  startRecording,
+  stopRecording,
+  isRecording,
+  getRecordingDuration,
 })
 </script>
 
