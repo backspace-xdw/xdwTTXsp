@@ -1,0 +1,15 @@
+[Unit]
+Description=xdwTTXsp Backend Server (GPS Vehicle Monitoring Platform)
+After=network.target mysql.service redis.service
+
+[Service]
+Type=simple
+User=shenzheng
+WorkingDirectory=/home/shenzheng/xdwTTXsp/backend
+ExecStart=/usr/bin/node dist/app.js
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target

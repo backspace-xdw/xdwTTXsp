@@ -1,0 +1,15 @@
+[Unit]
+Description=xdwTTXsp Frontend Server (GPS Vehicle Monitoring Platform)
+After=network.target xdwttxsp-backend.service
+
+[Service]
+Type=simple
+User=shenzheng
+WorkingDirectory=/home/shenzheng/xdwTTXsp/frontend
+ExecStart=/usr/bin/npx serve -s dist -l 8090
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
