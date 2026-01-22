@@ -46,10 +46,10 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'Replay', icon: 'replay' }
       },
       {
-        path: 'multi-video',
-        name: 'MultiVideo',
+        path: 'multi-track',
+        name: 'MultiTrack',
         component: () => import('@/views/multi-video/index.vue'),
-        meta: { title: 'Multi-V', icon: 'video' }
+        meta: { title: '多车轨迹', icon: 'track' }
       },
       {
         path: 'safety-cal',
@@ -58,10 +58,10 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'Safety CAL', icon: 'calculator' }
       },
       {
-        path: 'ai-manage',
-        name: 'AIManage',
-        component: () => import('@/views/ai-manage/index.vue'),
-        meta: { title: 'AI Manage', icon: 'ai-manage' }
+        path: 'safety-manage',
+        name: 'SafetyManage',
+        component: () => import('@/views/safety-manage/index.vue'),
+        meta: { title: '安全管理', icon: 'safety' }
       },
       {
         path: 'safety-edu',

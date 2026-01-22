@@ -15,11 +15,13 @@
     "echarts": "^6.0.0",
     "element-plus": "^2.13.0",
     "flv.js": "^1.6.2",
+    "html2canvas": "^1.4.1",
     "pinia": "^3.0.4",
     "sass": "^1.97.1",
     "socket.io-client": "^4.8.3",
     "vue": "^3.5.24",
-    "vue-router": "^4.6.4"
+    "vue-router": "^4.6.4",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",

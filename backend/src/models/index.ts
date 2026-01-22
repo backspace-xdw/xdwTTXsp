@@ -71,6 +71,8 @@ export { DeviceRealtime } from './DeviceRealtime'
 // 导入模型用于关联设置
 import { Device } from './Device'
 import { DeviceRealtime } from './DeviceRealtime'
+import { Driver } from './Driver'
+import { Company } from './Company'
 
 // 设置模型关联
 DeviceRealtime.belongsTo(Device, {
@@ -83,4 +85,15 @@ Device.hasOne(DeviceRealtime, {
   foreignKey: 'device_id',
   sourceKey: 'device_id',
   as: 'realtime'
+})
+
+// 驾驶员-企业关联
+Driver.belongsTo(Company, {
+  foreignKey: 'company_id',
+  as: 'company'
+})
+
+Company.hasMany(Driver, {
+  foreignKey: 'company_id',
+  as: 'drivers'
 })

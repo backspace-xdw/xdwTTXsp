@@ -1,0 +1,514 @@
+// ============================================
+// GPS Vehicle Monitoring Platform - Global Styles
+// ============================================
+
+@import './variables.scss';
+
+// ===================
+// Reset & Base
+// ===================
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+  font-size: 14px;
+  color: $text-primary;
+  background: $bg-dark-primary;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// ===================
+// Common Classes
+// ===================
+
+// Flex utilities
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.flex-wrap { flex-wrap: wrap; }
+.flex-1 { flex: 1; }
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.items-end { align-items: flex-end; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.justify-end { justify-content: flex-end; }
+.gap-4 { gap: 4px; }
+.gap-8 { gap: 8px; }
+.gap-12 { gap: 12px; }
+.gap-16 { gap: 16px; }
+
+// Text utilities
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-white { color: #fff; }
+.text-primary { color: $primary-color; }
+.text-success { color: $success-color; }
+.text-warning { color: $warning-color; }
+.text-danger { color: $danger-color; }
+.text-muted { color: $text-muted; }
+.text-ellipsis {
+  @include text-ellipsis;
+}
+
+// Spacing utilities
+.m-0 { margin: 0; }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-16 { margin-bottom: 16px; }
+.ml-8 { margin-left: 8px; }
+.mr-8 { margin-right: 8px; }
+.p-0 { padding: 0; }
+.p-8 { padding: 8px; }
+.p-16 { padding: 16px; }
+
+// Display utilities
+.hidden { display: none; }
+.block { display: block; }
+.inline-block { display: inline-block; }
+
+// Width/Height utilities
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+
+// ===================
+// Custom Scrollbar
+// ===================
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: $border-dark;
+  border-radius: 3px;
+
+  &:hover {
+    background: $border-dark-light;
+  }
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+// ===================
+// Page Transition
+// ===================
+.page-enter-active,
+.page-leave-active {
+  transition: all 0.3s ease;
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+// ===================
+// Loading Spinner
+// ===================
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid $border-dark;
+  border-top-color: $primary-color;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+// ===================
+// Status Indicators
+// ===================
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+
+  &.online {
+    background: $status-online;
+    box-shadow: 0 0 6px rgba($status-online, 0.5);
+  }
+
+  &.offline {
+    background: $status-offline;
+  }
+
+  &.driving {
+    background: $status-driving;
+    animation: pulse 1.5s infinite;
+  }
+
+  &.alarm {
+    background: $status-alarm;
+    animation: pulse 0.8s infinite;
+  }
+
+  &.parking {
+    background: $status-parking;
+  }
+}
+
+// ===================
+// Card Components
+// ===================
+.card {
+  @include card-style;
+
+  &.card-hover {
+    @include card-hover;
+  }
+}
+
+.card-header {
+  @include flex-between;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid $border-dark;
+
+  .title {
+    font-size: 16px;
+    font-weight: 600;
+    color: $text-primary;
+  }
+}
+
+// ===================
+// Form Elements Enhancement
+// ===================
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner {
+  background: $bg-dark-elevated !important;
+  box-shadow: none !important;
+  border: 1px solid $border-dark;
+
+  &:hover,
+  &.is-focus {
+    border-color: $primary-color !important;
+  }
+}
+
+.el-input__inner,
+.el-textarea__inner {
+  color: $text-primary;
+
+  &::placeholder {
+    color: $text-muted;
+  }
+}
+
+// ===================
+// Button Enhancement
+// ===================
+.btn-back {
+  @include back-button;
+}
+
+// ===================
+// Table Enhancement (Dark Theme)
+// ===================
+.dark-table {
+  .el-table {
+    background: transparent;
+    --el-table-bg-color: transparent;
+    --el-table-tr-bg-color: transparent;
+
+    th.el-table__cell {
+      background: $bg-dark-elevated !important;
+      color: $text-primary;
+      border-bottom: 1px solid $border-dark-light;
+      font-weight: 600;
+    }
+
+    td.el-table__cell {
+      background: transparent !important;
+      color: $text-primary;
+      border-bottom: 1px solid $border-dark;
+    }
+
+    tr:hover td.el-table__cell {
+      background: $primary-bg !important;
+    }
+
+    .current-row td.el-table__cell {
+      background: $primary-bg-hover !important;
+    }
+
+    &::before,
+    .el-table__inner-wrapper::before {
+      display: none;
+    }
+  }
+}
+
+// ===================
+// Dialog Enhancement (Dark Theme)
+// ===================
+.el-dialog {
+  --el-dialog-bg-color: #{$bg-dark-primary};
+  border-radius: $radius-xl;
+  overflow: hidden;
+
+  .el-dialog__header {
+    background: $bg-dark-secondary;
+    padding: 20px 24px;
+    margin: 0;
+
+    .el-dialog__title {
+      color: $text-primary;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .el-dialog__headerbtn {
+      .el-dialog__close {
+        color: $text-secondary;
+
+        &:hover {
+          color: $text-primary;
+        }
+      }
+    }
+  }
+
+  .el-dialog__body {
+    background: $bg-dark-primary;
+    padding: 24px;
+  }
+
+  .el-dialog__footer {
+    background: $bg-dark-primary;
+    border-top: 1px solid $border-dark;
+    padding: 16px 24px;
+  }
+}
+
+// ===================
+// Message & Notification Enhancement
+// ===================
+.el-message {
+  background: $bg-dark-secondary !important;
+  border: 1px solid $border-dark !important;
+
+  .el-message__content {
+    color: $text-primary !important;
+  }
+}
+
+.el-notification {
+  background: $bg-dark-secondary !important;
+  border: 1px solid $border-dark !important;
+
+  .el-notification__title {
+    color: $text-primary !important;
+  }
+
+  .el-notification__content {
+    color: $text-secondary !important;
+  }
+}
+
+// ===================
+// Dropdown Enhancement
+// ===================
+.el-dropdown-menu {
+  background: $bg-dark-secondary !important;
+  border: 1px solid $border-dark !important;
+
+  .el-dropdown-menu__item {
+    color: $text-primary !important;
+
+    &:hover {
+      background: $primary-bg !important;
+      color: $primary-color !important;
+    }
+  }
+}
+
+// ===================
+// Tooltip Enhancement
+// ===================
+.el-tooltip__popper {
+  background: $bg-dark-elevated !important;
+  border: 1px solid $border-dark !important;
+  color: $text-primary !important;
+
+  .el-popper__arrow::before {
+    background: $bg-dark-elevated !important;
+    border-color: $border-dark !important;
+  }
+}
+
+// ===================
+// Pagination Enhancement
+// ===================
+.el-pagination {
+  --el-pagination-bg-color: transparent;
+  --el-pagination-text-color: #{$text-secondary};
+
+  .el-pager li {
+    background: transparent;
+    color: $text-secondary;
+
+    &.is-active {
+      color: $primary-color;
+    }
+
+    &:hover {
+      color: $primary-color;
+    }
+  }
+
+  button {
+    background: transparent !important;
+    color: $text-secondary;
+
+    &:disabled {
+      color: $text-muted;
+    }
+  }
+}
+
+// ===================
+// Page Header (with back button)
+// ===================
+.page-header {
+  @include flex-between;
+  padding: 12px 16px;
+  background: $bg-dark-secondary;
+  border-bottom: 1px solid $border-dark;
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    .page-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: $text-primary;
+    }
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+}
+
+// ===================
+// Empty State
+// ===================
+.empty-state {
+  @include flex-center;
+  flex-direction: column;
+  padding: 60px 20px;
+  color: $text-muted;
+
+  .empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+  }
+
+  .empty-text {
+    font-size: 16px;
+  }
+
+  .empty-action {
+    margin-top: 20px;
+  }
+}
+
+// ===================
+// Live Indicator
+// ===================
+.live-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba($danger-color, 0.1);
+  border-radius: 20px;
+  font-size: 12px;
+  color: $danger-color;
+
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    background: $danger-color;
+    border-radius: 50%;
+    animation: pulse 1s infinite;
+  }
+}
+
+// ===================
+// Risk Level Tags
+// ===================
+.risk-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+
+  &.high {
+    background: $gradient-card-danger;
+    color: #fff;
+  }
+
+  &.medium {
+    background: $gradient-card-warning;
+    color: #fff;
+  }
+
+  &.low {
+    background: linear-gradient(135deg, #eab308, #ca8a04);
+    color: $text-dark;
+  }
+}
+
+// ===================
+// Animation Classes
+// ===================
+.animate-pulse {
+  animation: pulse 1.5s infinite;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease;
+}
