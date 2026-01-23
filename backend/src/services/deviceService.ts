@@ -5,6 +5,12 @@
 
 import { Device, DeviceRealtime } from '../models'
 import { RegisterInfo, STATUS_FLAG } from '../jt808/constants'
+import * as cacheService from './cacheService'
+
+// 设备信息内存缓存 (LRU)
+const deviceCache = new Map<string, { device: Device; timestamp: number }>()
+const DEVICE_CACHE_TTL = 60000 // 60秒
+const DEVICE_CACHE_MAX_SIZE = 10000 // 最多缓存1万个设备
 
 /**
  * 注册或更新设备
@@ -146,6 +152,104 @@ export async function setTimeoutDevicesOffline(timeoutMs: number = 180000): Prom
  */
 export async function getDevice(deviceId: string): Promise<Device | null> {
   return Device.findOne({ where: { device_id: deviceId } })
+}
+
+/**
+ * 获取设备信息 (带缓存)
+ * 优先从内存缓存获取，减少数据库查询
+ */
+export async function getDeviceCached(deviceId: string): Promise<Device | null> {
+  const now = Date.now()
+
+  // 1. 检查内存缓存
+  const cached = deviceCache.get(deviceId)
+  if (cached && (now - cached.timestamp) < DEVICE_CACHE_TTL) {
+    return cached.device
+  }
+
+  // 2. 检查 Redis 缓存
+  if (cacheService.isCacheAvailable()) {
+    const redisCached = await cacheService.get<any>(`device:${deviceId}`)
+    if (redisCached) {
+      // 更新内存缓存
+      deviceCache.set(deviceId, { device: redisCached as Device, timestamp: now })
+      return redisCached as Device
+    }
+  }
+
+  // 3. 查询数据库
+  const device = await Device.findOne({ where: { device_id: deviceId } })
+
+  if (device) {
+    // LRU 淘汰: 如果缓存满了，删除最旧的
+    if (deviceCache.size >= DEVICE_CACHE_MAX_SIZE) {
+      const oldestKey = deviceCache.keys().next().value
+      if (oldestKey) deviceCache.delete(oldestKey)
+    }
+
+    // 写入内存缓存
+    deviceCache.set(deviceId, { device, timestamp: now })
+
+    // 写入 Redis 缓存 (异步)
+    if (cacheService.isCacheAvailable()) {
+      cacheService.set(`device:${deviceId}`, device.toJSON(), 300).catch(() => {})
+    }
+  }
+
+  return device
+}
+
+/**
+ * 批量获取设备信息 (带缓存)
+ */
+export async function getDevicesBatchCached(deviceIds: string[]): Promise<Map<string, Device>> {
+  const result = new Map<string, Device>()
+  const missingIds: string[] = []
+  const now = Date.now()
+
+  // 1. 从内存缓存获取
+  for (const id of deviceIds) {
+    const cached = deviceCache.get(id)
+    if (cached && (now - cached.timestamp) < DEVICE_CACHE_TTL) {
+      result.set(id, cached.device)
+    } else {
+      missingIds.push(id)
+    }
+  }
+
+  // 2. 批量查询数据库
+  if (missingIds.length > 0) {
+    const devices = await Device.findAll({
+      where: { device_id: missingIds }
+    })
+
+    devices.forEach(device => {
+      result.set(device.device_id, device)
+      // 更新缓存
+      if (deviceCache.size < DEVICE_CACHE_MAX_SIZE) {
+        deviceCache.set(device.device_id, { device, timestamp: now })
+      }
+    })
+  }
+
+  return result
+}
+
+/**
+ * 清除设备缓存
+ */
+export function clearDeviceCache(deviceId?: string): void {
+  if (deviceId) {
+    deviceCache.delete(deviceId)
+    if (cacheService.isCacheAvailable()) {
+      cacheService.del(`device:${deviceId}`).catch(() => {})
+    }
+  } else {
+    deviceCache.clear()
+    if (cacheService.isCacheAvailable()) {
+      cacheService.delByPattern('device:*').catch(() => {})
+    }
+  }
 }
 
 /**

@@ -14,7 +14,7 @@ const DB_NAME = process.env.DB_NAME || 'gps_platform'
 const DB_USER = process.env.DB_USER || 'root'
 const DB_PASSWORD = process.env.DB_PASSWORD || ''
 
-// 创建Sequelize实例
+// 创建Sequelize实例 - 优化连接池支持万级并发
 export const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
   host: DB_HOST,
   port: DB_PORT,
@@ -22,16 +22,27 @@ export const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
   timezone: '+08:00',
   pool: {
-    max: 10,
-    min: 0,
-    acquire: 30000,
-    idle: 10000
+    max: 100,              // 最大连接数 (支持高并发)
+    min: 10,               // 最小连接数 (保持热连接)
+    acquire: 60000,        // 获取连接超时 60s
+    idle: 30000,           // 空闲连接超时 30s
+    evict: 10000           // 清理检查间隔 10s
+  },
+  dialectOptions: {
+    connectTimeout: 60000,           // 连接超时 60s
+    supportBigNumbers: true,         // 支持大数
+    bigNumberStrings: true,          // 大数转字符串
+    multipleStatements: true,        // 支持多语句 (批量操作)
+    dateStrings: true                // 日期返回字符串
   },
   define: {
     timestamps: true,
     underscored: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at'
+  },
+  retry: {
+    max: 3                           // 失败重试3次
   }
 })
 

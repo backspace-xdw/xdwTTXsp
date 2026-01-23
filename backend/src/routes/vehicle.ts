@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { Device, DeviceRealtime, Location, Vehicle, Company } from '../models'
 import { Op } from 'sequelize'
+import * as cache from '../services/cacheService'
 
 const router = Router()
 
@@ -30,6 +31,14 @@ function getVehicleStatus(realtime: DeviceRealtime | null): string {
 router.get('/', async (req: Request, res: Response) => {
   try {
     const { companyId, status, online, page = 1, pageSize = 20, keyword } = req.query
+
+    // 尝试从缓存获取
+    const cacheParams = { companyId, status, online, page, pageSize, keyword }
+    const cachedData = await cache.getVehicleList(cacheParams)
+    if (cachedData) {
+      console.log('[Vehicle] Cache hit for list query')
+      return res.json(cachedData)
+    }
 
     // 查询设备及其实时数据
     const devices = await Device.findAll({
@@ -95,7 +104,7 @@ router.get('/', async (req: Request, res: Response) => {
     const end = start + Number(pageSize)
     const list = vehicleList.slice(start, end)
 
-    res.json({
+    const response = {
       code: 0,
       data: {
         list,
@@ -103,7 +112,12 @@ router.get('/', async (req: Request, res: Response) => {
         page: Number(page),
         pageSize: Number(pageSize)
       }
-    })
+    }
+
+    // 缓存结果
+    await cache.setVehicleList(cacheParams, response)
+
+    res.json(response)
   } catch (error) {
     console.error('[Vehicle] 获取车辆列表失败:', error)
     res.status(500).json({
@@ -116,6 +130,13 @@ router.get('/', async (req: Request, res: Response) => {
 // 获取所有车辆实时位置 (用于地图显示)
 router.get('/realtime/all', async (req: Request, res: Response) => {
   try {
+    // 尝试从缓存获取
+    const cachedData = await cache.getRealtimeLocations()
+    if (cachedData) {
+      console.log('[Vehicle] Cache hit for realtime locations')
+      return res.json(cachedData)
+    }
+
     const devices = await Device.findAll({
       include: [{
         model: DeviceRealtime,
@@ -143,10 +164,15 @@ router.get('/realtime/all', async (req: Request, res: Response) => {
         }
       })
 
-    res.json({
+    const response = {
       code: 0,
       data: locations
-    })
+    }
+
+    // 缓存结果 (10秒)
+    await cache.setRealtimeLocations(response)
+
+    res.json(response)
   } catch (error) {
     console.error('[Vehicle] 获取实时位置失败:', error)
     res.status(500).json({
@@ -352,6 +378,13 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
 // 车辆统计
 router.get('/stats/overview', async (req: Request, res: Response) => {
   try {
+    // 尝试从缓存获取
+    const cachedData = await cache.getStats()
+    if (cachedData) {
+      console.log('[Vehicle] Cache hit for stats')
+      return res.json(cachedData)
+    }
+
     const devices = await Device.findAll({
       include: [{
         model: DeviceRealtime,
@@ -385,7 +418,7 @@ router.get('/stats/overview', async (req: Request, res: Response) => {
     const total = devices.length
     const offline = total - online
 
-    res.json({
+    const response = {
       code: 0,
       data: {
         total,
@@ -397,7 +430,12 @@ router.get('/stats/overview', async (req: Request, res: Response) => {
         alarm,
         onlineRate: total > 0 ? ((online / total) * 100).toFixed(2) : '0.00'
       }
-    })
+    }
+
+    // 缓存结果 (60秒)
+    await cache.setStats(response)
+
+    res.json(response)
   } catch (error) {
     console.error('[Vehicle] 获取统计失败:', error)
     res.status(500).json({

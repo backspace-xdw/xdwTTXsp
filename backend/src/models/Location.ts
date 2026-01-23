@@ -126,9 +126,24 @@ Location.init(
     tableName: 'locations',
     updatedAt: false,
     indexes: [
-      { fields: ['device_id', 'gps_time'] },
-      { fields: ['gps_time'] },
-      { fields: ['device_id'] }
+      // 组合索引优化轨迹查询 (设备+时间范围)
+      {
+        name: 'idx_device_gps_time',
+        fields: ['device_id', 'gps_time'],
+        using: 'BTREE'
+      },
+      // 时间索引用于数据清理和统计
+      {
+        name: 'idx_gps_time',
+        fields: ['gps_time'],
+        using: 'BTREE'
+      },
+      // 报警数据快速查询
+      {
+        name: 'idx_alarm_flag',
+        fields: ['alarm_flag'],
+        where: { alarm_flag: { $gt: 0 } }  // 部分索引，只索引有报警的
+      }
     ]
   }
 )

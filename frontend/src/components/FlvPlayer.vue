@@ -72,6 +72,10 @@ import {
   FullScreen,
 } from '@element-plus/icons-vue'
 
+// 全局视频连接管理器 - 限制并发连接数
+const MAX_CONCURRENT_CONNECTIONS = 4
+const activeConnections = new Set<string>()
+
 const props = withDefaults(defineProps<{
   deviceId: string
   channel: number
@@ -81,6 +85,8 @@ const props = withDefaults(defineProps<{
   showChannelLabel?: boolean
   showRetry?: boolean
   offlineText?: string
+  maxRetries?: number       // 最大重试次数
+  retryBaseDelay?: number   // 重试基础延迟(ms)
 }>(), {
   autoplay: true,
   muted: true,
@@ -88,6 +94,8 @@ const props = withDefaults(defineProps<{
   showChannelLabel: true,
   showRetry: true,
   offlineText: '视频未连接',
+  maxRetries: 5,
+  retryBaseDelay: 1000,
 })
 
 const emit = defineEmits<{
@@ -126,6 +134,11 @@ const mediaRecorder = ref<MediaRecorder | null>(null)
 const recordedChunks = ref<Blob[]>([])
 const recordingStartTime = ref<number>(0)
 
+// 重试状态
+const retryCount = ref(0)
+let retryTimer: ReturnType<typeof setTimeout> | null = null
+const connectionId = computed(() => `${props.deviceId}:${props.channel}`)
+
 const channelName = computed(() => CHANNEL_NAMES[props.channel] || `通道${props.channel}`)
 
 // 构建流URL - 使用相对路径，通过nginx代理
@@ -136,6 +149,37 @@ const streamUrl = computed(() => {
 
 // 检查flv.js支持
 const isSupported = computed(() => flvjs.isSupported())
+
+// 计算指数退避延迟
+function getRetryDelay(): number {
+  const delay = props.retryBaseDelay * Math.pow(2, retryCount.value)
+  return Math.min(delay, 30000) // 最大30秒
+}
+
+// 智能重试
+function scheduleRetry() {
+  if (retryCount.value >= props.maxRetries) {
+    console.log(`[FlvPlayer] ${connectionId.value} max retries reached`)
+    error.value = `连接失败，已重试 ${props.maxRetries} 次`
+    return
+  }
+
+  const delay = getRetryDelay()
+  console.log(`[FlvPlayer] ${connectionId.value} retry ${retryCount.value + 1}/${props.maxRetries} in ${delay}ms`)
+
+  retryTimer = setTimeout(() => {
+    retryCount.value++
+    connect()
+  }, delay)
+}
+
+// 清理重试定时器
+function clearRetryTimer() {
+  if (retryTimer) {
+    clearTimeout(retryTimer)
+    retryTimer = null
+  }
+}
 
 // 连接视频流
 function connect() {
@@ -148,11 +192,22 @@ function connect() {
     return
   }
 
+  // 检查并发连接数限制
+  if (activeConnections.size >= MAX_CONCURRENT_CONNECTIONS && !activeConnections.has(connectionId.value)) {
+    console.warn(`[FlvPlayer] Max concurrent connections (${MAX_CONCURRENT_CONNECTIONS}) reached`)
+    error.value = `视频连接数已达上限 (${MAX_CONCURRENT_CONNECTIONS})`
+    return
+  }
+
   // 清理旧连接
   disconnect()
+  clearRetryTimer()
 
   isLoading.value = true
   error.value = null
+
+  // 注册连接
+  activeConnections.add(connectionId.value)
 
   try {
     flvPlayer.value = flvjs.createPlayer({
@@ -161,42 +216,55 @@ function connect() {
       url: streamUrl.value,
       cors: true,
     }, {
-      enableWorker: false,
-      enableStashBuffer: false,
-      stashInitialSize: 128,
-      lazyLoad: false,
-      lazyLoadMaxDuration: 3 * 60,
-      lazyLoadRecoverDuration: 30,
+      // 启用Worker线程 - 提升解码性能
+      enableWorker: true,
+      // 优化缓冲配置 - 降低内存占用
+      enableStashBuffer: true,
+      stashInitialSize: 64,           // 降低初始缓冲大小 (KB)
+      lazyLoad: true,
+      lazyLoadMaxDuration: 60,        // 降低延迟加载最大时长
+      lazyLoadRecoverDuration: 15,
       deferLoadAfterSourceOpen: false,
+      // 自动清理SourceBuffer - 防止内存泄漏
       autoCleanupSourceBuffer: true,
-      autoCleanupMaxBackwardDuration: 3 * 60,
-      autoCleanupMinBackwardDuration: 2 * 60,
+      autoCleanupMaxBackwardDuration: 30,  // 最大后向保留30秒
+      autoCleanupMinBackwardDuration: 15,  // 最小后向保留15秒
+      // 统计信息
+      statisticsInfoReportInterval: 500,
     })
 
     flvPlayer.value.attachMediaElement(videoRef.value)
 
     // 事件监听
     flvPlayer.value.on(flvjs.Events.LOADING_COMPLETE, () => {
-      console.log(`[FlvPlayer] ${props.deviceId}:${props.channel} loading complete`)
+      console.log(`[FlvPlayer] ${connectionId.value} loading complete`)
     })
 
     flvPlayer.value.on(flvjs.Events.RECOVERED_EARLY_EOF, () => {
-      console.log(`[FlvPlayer] ${props.deviceId}:${props.channel} recovered EOF`)
+      console.log(`[FlvPlayer] ${connectionId.value} recovered EOF, scheduling retry`)
+      scheduleRetry()
     })
 
     flvPlayer.value.on(flvjs.Events.MEDIA_INFO, (info: any) => {
-      console.log(`[FlvPlayer] ${props.deviceId}:${props.channel} media info:`, info)
+      console.log(`[FlvPlayer] ${connectionId.value} media info:`, info)
       isLoading.value = false
       isConnected.value = true
+      retryCount.value = 0  // 连接成功，重置重试计数
       emit('connected')
     })
 
     flvPlayer.value.on(flvjs.Events.ERROR, (errType: string, errDetail: string) => {
-      console.error(`[FlvPlayer] ${props.deviceId}:${props.channel} error:`, errType, errDetail)
+      console.error(`[FlvPlayer] ${connectionId.value} error:`, errType, errDetail)
       isLoading.value = false
       isConnected.value = false
-      error.value = `播放错误: ${errDetail}`
-      emit('error', errDetail)
+
+      // 根据错误类型决定是否重试
+      if (errType === flvjs.ErrorTypes.NETWORK_ERROR) {
+        scheduleRetry()
+      } else {
+        error.value = `播放错误: ${errDetail}`
+        emit('error', errDetail)
+      }
     })
 
     flvPlayer.value.load()
@@ -207,8 +275,9 @@ function connect() {
     }
 
   } catch (err: any) {
-    console.error(`[FlvPlayer] ${props.deviceId}:${props.channel} create error:`, err)
+    console.error(`[FlvPlayer] ${connectionId.value} create error:`, err)
     isLoading.value = false
+    activeConnections.delete(connectionId.value)
     error.value = err.message || '创建播放器失败'
     emit('error', error.value!)
   }
@@ -216,6 +285,8 @@ function connect() {
 
 // 断开连接
 function disconnect() {
+  clearRetryTimer()
+
   if (flvPlayer.value) {
     try {
       flvPlayer.value.pause()
@@ -227,6 +298,9 @@ function disconnect() {
     }
     flvPlayer.value = null
   }
+
+  // 从活动连接中移除
+  activeConnections.delete(connectionId.value)
 
   isPlaying.value = false
   isConnected.value = false
@@ -297,7 +371,17 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  clearRetryTimer()
   disconnect()
+
+  // 清理录像资源
+  if (mediaRecorder.value) {
+    try {
+      mediaRecorder.value.stop()
+    } catch (e) {}
+    mediaRecorder.value = null
+  }
+  recordedChunks.value = []
 })
 
 // 截图功能

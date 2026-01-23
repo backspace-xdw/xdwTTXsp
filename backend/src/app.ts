@@ -31,6 +31,12 @@ import { initJT1078, shutdownJT1078, getJT1078Server, getStreamManager } from '.
 // 导入服务层
 import { deviceService, locationService, alarmService } from './services'
 
+// 导入高性能批处理服务
+import * as batchService from './services/batchService'
+
+// 导入缓存服务
+import * as cacheService from './services/cacheService'
+
 // 导入数据库
 import { testConnection, syncModels } from './models'
 
@@ -65,6 +71,48 @@ app.use('/api/operations', operationsRoutes)
 // 健康检查
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
+// 性能监控端点
+app.get('/api/system/stats', async (req, res) => {
+  try {
+    // 批处理服务统计
+    const batchStats = batchService.getStats()
+
+    // JT808 连接统计
+    const jt808Stats = jt808Server ? {
+      onlineDevices: jt808Server.getOnlineCount(),
+      devices: jt808Server.getOnlineDevices().length
+    } : null
+
+    // WebSocket 统计
+    const wsStats = {
+      connectedClients: io.sockets.sockets.size,
+      rooms: io.sockets.adapter.rooms.size
+    }
+
+    // 内存使用
+    const memUsage = process.memoryUsage()
+
+    // Redis 状态
+    const redisStatus = cacheService.isCacheAvailable() ? 'connected' : 'disconnected'
+
+    res.json({
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: {
+        heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + 'MB',
+        heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + 'MB',
+        rss: Math.round(memUsage.rss / 1024 / 1024) + 'MB'
+      },
+      batch: batchStats,
+      jt808: jt808Stats,
+      websocket: wsStats,
+      redis: redisStatus
+    })
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get system stats' })
+  }
 })
 
 // WebSocket设置
@@ -146,23 +194,42 @@ async function initializeJT808() {
     }
   })
 
-  // 监听位置上报事件
+  // 监听位置上报事件 (使用批处理服务优化性能)
   jt808Server.on('location', async (data) => {
     try {
       const { deviceId, location, extras, status } = data
 
-      // 保存位置到数据库
-      await locationService.saveLocation(deviceId, location, extras)
+      // 使用批处理服务异步保存位置 (非阻塞)
+      batchService.addGpsData(deviceId, location, extras)
 
-      // 获取设备信息获取车牌号
-      const device = await deviceService.getDevice(deviceId)
+      // 处理南纬/西经
+      let lat = location.latitude
+      let lng = location.longitude
+      if (status.southLat) lat = -lat
+      if (status.westLng) lng = -lng
+
+      // 更新实时状态 (使用批处理服务)
+      batchService.updateRealtimeStatus(deviceId, {
+        latitude: lat,
+        longitude: lng,
+        altitude: location.altitude,
+        speed: location.speed,
+        direction: location.direction,
+        mileage: extras?.mileage,
+        alarmFlag: location.alarmFlag,
+        status: location.status,
+        gpsTime: location.gpsTime
+      })
+
+      // 获取设备信息 (使用缓存)
+      const device = await deviceService.getDeviceCached(deviceId)
 
       // 广播GPS更新到前端
       broadcastGpsUpdate({
         deviceId,
         plateNo: device?.plate_no,
-        lat: location.latitude,
-        lng: location.longitude,
+        lat,
+        lng,
         altitude: location.altitude,
         speed: location.speed,
         direction: location.direction,
@@ -242,6 +309,18 @@ async function startServer() {
       console.warn('[DB] 数据库连接失败，将使用模拟数据模式')
     }
 
+    // 初始化 Redis 缓存服务
+    try {
+      await cacheService.initRedis()
+      console.log('✅ Redis 缓存服务已启动')
+    } catch (error) {
+      console.warn('[Cache] Redis 初始化失败，将在无缓存模式下运行:', error)
+    }
+
+    // 初始化批处理服务
+    batchService.init()
+    console.log('✅ 批处理服务已启动')
+
     // 启动HTTP服务器
     httpServer.listen(PORT, async () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`)
@@ -270,29 +349,39 @@ async function startServer() {
 }
 
 // 优雅关闭
-process.on('SIGTERM', async () => {
-  console.log('收到 SIGTERM 信号，正在关闭服务器...')
-  await shutdownJT1078()
-  if (jt808Server) {
-    await jt808Server.stop()
-  }
-  httpServer.close(() => {
-    console.log('服务器已关闭')
-    process.exit(0)
-  })
-})
+async function gracefulShutdown(signal: string) {
+  console.log(`收到 ${signal} 信号，正在关闭服务器...`)
 
-process.on('SIGINT', async () => {
-  console.log('收到 SIGINT 信号，正在关闭服务器...')
+  // 1. 刷新批处理缓冲区
+  console.log('[Shutdown] 刷新批处理缓冲区...')
+  await batchService.shutdown()
+
+  // 2. 关闭 JT1078 视频服务
   await shutdownJT1078()
+
+  // 3. 关闭 JT808 服务
   if (jt808Server) {
     await jt808Server.stop()
   }
+
+  // 4. 关闭 Redis 连接
+  await cacheService.closeRedis()
+
+  // 5. 关闭 HTTP 服务器
   httpServer.close(() => {
     console.log('服务器已关闭')
     process.exit(0)
   })
-})
+
+  // 超时强制退出
+  setTimeout(() => {
+    console.error('强制退出 (超时)')
+    process.exit(1)
+  }, 10000)
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
+process.on('SIGINT', () => gracefulShutdown('SIGINT'))
 
 // 启动
 startServer()

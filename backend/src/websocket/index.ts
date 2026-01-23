@@ -1,5 +1,12 @@
 import { Server as SocketIOServer, Socket } from 'socket.io'
 
+// ========== 配置常量 ==========
+const MAX_CONNECTIONS = 10000                    // 最大连接数
+const MESSAGE_QUEUE_SIZE = 1000                  // 消息队列大小
+const BROADCAST_BATCH_INTERVAL = 50              // 批量广播间隔(ms)
+const ENABLE_SIMULATION = process.env.ENABLE_GPS_SIMULATION === 'true'
+
+// ========== 状态管理 ==========
 // 存储连接的客户端
 const connectedClients = new Map<string, Socket>()
 // 存储订阅的车辆
@@ -8,14 +15,89 @@ const vehicleSubscriptions = new Map<string, Set<string>>()
 // WebSocket实例引用
 let ioInstance: SocketIOServer | null = null
 
-// 是否启用模拟数据
-const ENABLE_SIMULATION = process.env.ENABLE_GPS_SIMULATION === 'true'
+// ========== 消息队列 (背压处理) ==========
+interface QueuedMessage {
+  room: string
+  event: string
+  data: any
+}
+const messageQueue: QueuedMessage[] = []
+let queueProcessTimer: NodeJS.Timeout | null = null
+
+// 处理消息队列
+function processMessageQueue() {
+  if (messageQueue.length === 0 || !ioInstance) {
+    queueProcessTimer = null
+    return
+  }
+
+  // 批量处理消息，按房间分组
+  const roomMessages = new Map<string, Map<string, any[]>>()
+
+  // 最多处理100条消息
+  const batch = messageQueue.splice(0, 100)
+
+  batch.forEach(msg => {
+    if (!roomMessages.has(msg.room)) {
+      roomMessages.set(msg.room, new Map())
+    }
+    const eventMap = roomMessages.get(msg.room)!
+    if (!eventMap.has(msg.event)) {
+      eventMap.set(msg.event, [])
+    }
+    eventMap.get(msg.event)!.push(msg.data)
+  })
+
+  // 发送分组消息
+  roomMessages.forEach((eventMap, room) => {
+    eventMap.forEach((dataList, event) => {
+      // 如果只有一条消息，直接发送；否则发送批量数据
+      if (dataList.length === 1) {
+        ioInstance!.to(room).emit(event, dataList[0])
+      } else {
+        ioInstance!.to(room).emit(`${event}:batch`, dataList)
+      }
+    })
+  })
+
+  // 如果队列还有消息，继续处理
+  if (messageQueue.length > 0) {
+    queueProcessTimer = setTimeout(processMessageQueue, BROADCAST_BATCH_INTERVAL)
+  } else {
+    queueProcessTimer = null
+  }
+}
+
+// 入队消息 (带背压)
+function enqueueMessage(room: string, event: string, data: any) {
+  // 背压处理：如果队列满了，丢弃最旧的消息
+  if (messageQueue.length >= MESSAGE_QUEUE_SIZE) {
+    messageQueue.shift()
+    console.warn('[WebSocket] Message queue full, dropping oldest message')
+  }
+
+  messageQueue.push({ room, event, data })
+
+  // 启动队列处理
+  if (!queueProcessTimer) {
+    queueProcessTimer = setTimeout(processMessageQueue, BROADCAST_BATCH_INTERVAL)
+  }
+}
 
 export function setupWebSocket(io: SocketIOServer) {
   ioInstance = io
 
+  // 连接中间件 - 限制连接数
+  io.use((socket, next) => {
+    if (connectedClients.size >= MAX_CONNECTIONS) {
+      console.warn(`[WebSocket] Max connections (${MAX_CONNECTIONS}) reached, rejecting new connection`)
+      return next(new Error('Server is at maximum capacity'))
+    }
+    next()
+  })
+
   io.on('connection', (socket: Socket) => {
-    console.log(`[WebSocket] Client connected: ${socket.id}`)
+    console.log(`[WebSocket] Client connected: ${socket.id} (total: ${connectedClients.size + 1}/${MAX_CONNECTIONS})`)
     connectedClients.set(socket.id, socket)
 
     // 订阅车辆
@@ -154,6 +236,7 @@ export function sendAlarm(io: SocketIOServer, data: any) {
 
 /**
  * 广播GPS位置更新 (JT808)
+ * 使用消息队列实现背压处理和批量广播
  */
 export function broadcastGpsUpdate(data: {
   deviceId: string
@@ -176,15 +259,14 @@ export function broadcastGpsUpdate(data: {
     gpsTime: typeof data.gpsTime === 'string' ? data.gpsTime : data.gpsTime.toISOString()
   }
 
-  // 广播给所有订阅者
-  ioInstance.to('all-updates').emit('gps:update', gpsData)
-
-  // 发送给订阅该设备的客户端
-  ioInstance.to(`device:${data.deviceId}`).emit('gps:update', gpsData)
+  // 使用消息队列广播
+  enqueueMessage('all-updates', 'gps:update', gpsData)
+  enqueueMessage(`device:${data.deviceId}`, 'gps:update', gpsData)
 }
 
 /**
  * 广播报警信息 (JT808)
+ * 报警消息直接发送，不经过队列 (高优先级)
  */
 export function broadcastAlarm(data: {
   deviceId: string
@@ -205,10 +287,8 @@ export function broadcastAlarm(data: {
     alarmTime: typeof data.gpsTime === 'string' ? data.gpsTime : data.gpsTime.toISOString()
   }
 
-  // 广播给所有订阅者
+  // 报警消息高优先级，直接发送不经过队列
   ioInstance.to('all-updates').emit('alarm:new', alarmData)
-
-  // 发送给订阅该设备的客户端
   ioInstance.to(`device:${data.deviceId}`).emit('alarm:new', alarmData)
 }
 
