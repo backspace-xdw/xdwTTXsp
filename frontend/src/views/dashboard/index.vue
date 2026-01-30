@@ -826,7 +826,7 @@ const initOperationChart = () => {
   charts.push(chart)
 
   chart.setOption({
-    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)', backgroundColor: 'rgba(10, 14, 39, 0.9)', borderColor: 'rgba(0, 200, 255, 0.3)', textStyle: { color: '#e0e6ed' } },
     series: [{
       type: 'pie',
       radius: ['55%', '75%'],
@@ -837,12 +837,12 @@ const initOperationChart = () => {
         position: 'center',
         formatter: '正常',
         fontSize: 14,
-        color: '#333'
+        color: '#e0e6ed'
       },
       data: [
-        { value: operationData.value.normal, name: '正常', itemStyle: { color: '#409eff' } },
-        { value: operationData.value.stopped, name: '停运', itemStyle: { color: '#9b59b6' } },
-        { value: operationData.value.expired, name: '服务到期', itemStyle: { color: '#00bcd4' } }
+        { value: operationData.value.normal, name: '正常', itemStyle: { color: '#00d4ff' } },
+        { value: operationData.value.stopped, name: '停运', itemStyle: { color: '#a855f7' } },
+        { value: operationData.value.expired, name: '服务到期', itemStyle: { color: '#00ffc8' } }
       ]
     }]
   })
@@ -860,21 +860,21 @@ const initOnlineTrendChart = () => {
     : [0, 0, 0, 0, 0, 0, 0]
 
   chart.setOption({
-    tooltip: { trigger: 'axis' },
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(10, 14, 39, 0.9)', borderColor: 'rgba(0, 200, 255, 0.3)', textStyle: { color: '#e0e6ed' } },
     grid: { left: 50, right: 20, top: 20, bottom: 30 },
     xAxis: {
       type: 'category',
       boundaryGap: false,
       data: ['0:00', '4:00', '8:00', '12:00', '16:00', '20:00', '24:00'],
-      axisLine: { lineStyle: { color: '#e8e8e8' } },
-      axisLabel: { color: '#666' }
+      axisLine: { lineStyle: { color: '#2a3a5c' } },
+      axisLabel: { color: '#7eb8da' }
     },
     yAxis: {
       type: 'value',
       axisLine: { show: false },
       axisTick: { show: false },
-      splitLine: { lineStyle: { color: '#f0f0f0' } },
-      axisLabel: { color: '#666' }
+      splitLine: { lineStyle: { color: 'rgba(0, 200, 255, 0.08)' } },
+      axisLabel: { color: '#7eb8da' }
     },
     series: [{
       type: 'line',
@@ -883,12 +883,12 @@ const initOnlineTrendChart = () => {
       symbolSize: 6,
       areaStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: 'rgba(64, 158, 255, 0.3)' },
-          { offset: 1, color: 'rgba(64, 158, 255, 0.05)' }
+          { offset: 0, color: 'rgba(0, 212, 255, 0.25)' },
+          { offset: 1, color: 'rgba(0, 212, 255, 0.02)' }
         ])
       },
-      lineStyle: { color: '#409eff', width: 2 },
-      itemStyle: { color: '#409eff' },
+      lineStyle: { color: '#00d4ff', width: 2 },
+      itemStyle: { color: '#00d4ff' },
       data: trendData
     }]
   })
@@ -902,14 +902,14 @@ const initCheckChart = () => {
   charts.push(chart)
 
   chart.setOption({
-    tooltip: { trigger: 'item' },
+    tooltip: { trigger: 'item', backgroundColor: 'rgba(10, 14, 39, 0.9)', borderColor: 'rgba(0, 200, 255, 0.3)', textStyle: { color: '#e0e6ed' } },
     series: [{
       type: 'pie',
       radius: ['40%', '60%'],
       center: ['50%', '50%'],
       data: [
-        { value: checkData.value.answered, name: '已应答', itemStyle: { color: '#67c23a' } },
-        { value: checkData.value.unanswered, name: '未应答', itemStyle: { color: '#f56c6c' } }
+        { value: checkData.value.answered, name: '已应答', itemStyle: { color: '#00ffc8' } },
+        { value: checkData.value.unanswered, name: '未应答', itemStyle: { color: '#ff4d6a' } }
       ],
       label: { show: false }
     }]
@@ -928,7 +928,7 @@ const initMileageRankChart = () => {
     : [{ name: '暂无数据', value: 0 }]
 
   chart.setOption({
-    tooltip: { trigger: 'axis' },
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(10, 14, 39, 0.9)', borderColor: 'rgba(0, 200, 255, 0.3)', textStyle: { color: '#e0e6ed' } },
     grid: { left: 100, right: 60, top: 10, bottom: 10 },
     xAxis: {
       type: 'value',
@@ -940,7 +940,7 @@ const initMileageRankChart = () => {
       data: data.map(d => d.name),
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { color: '#333' }
+      axisLabel: { color: '#7eb8da' }
     },
     series: [{
       type: 'bar',
@@ -948,8 +948,8 @@ const initMileageRankChart = () => {
       barWidth: 16,
       itemStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-          { offset: 0, color: '#409eff' },
-          { offset: 1, color: '#67c23a' }
+          { offset: 0, color: '#00d4ff' },
+          { offset: 1, color: '#00ffc8' }
         ]),
         borderRadius: [0, 8, 8, 0]
       },
@@ -957,7 +957,7 @@ const initMileageRankChart = () => {
         show: true,
         position: 'right',
         formatter: '{c}',
-        color: '#666'
+        color: '#7eb8da'
       }
     }]
   })
@@ -970,23 +970,24 @@ const initAlarmDistributionChart = () => {
   const chart = echarts.init(alarmDistributionChartRef.value)
   charts.push(chart)
 
-  const colors = ['#f56c6c', '#e6a23c', '#409eff', '#909399', '#67c23a']
+  const colors = ['#ff4d6a', '#ffb800', '#00d4ff', '#7eb8da', '#00ffc8']
   const data = operationChartData.value.alarmDistribution.length > 0
     ? operationChartData.value.alarmDistribution.map((item, idx) => ({
         value: item.value,
         name: item.name,
         itemStyle: { color: colors[idx % colors.length] }
       }))
-    : [{ value: 0, name: '暂无数据', itemStyle: { color: '#909399' } }]
+    : [{ value: 0, name: '暂无数据', itemStyle: { color: '#4a6a8a' } }]
 
   chart.setOption({
-    tooltip: { trigger: 'item' },
+    tooltip: { trigger: 'item', backgroundColor: 'rgba(10, 14, 39, 0.9)', borderColor: 'rgba(0, 200, 255, 0.3)', textStyle: { color: '#e0e6ed' } },
     legend: {
       orient: 'vertical',
       right: 10,
       top: 'center',
       itemWidth: 10,
-      itemHeight: 10
+      itemHeight: 10,
+      textStyle: { color: '#7eb8da' }
     },
     series: [{
       type: 'pie',
@@ -1014,20 +1015,20 @@ const initAlarmTrendOperationChart = () => {
     : [0, 0, 0, 0, 0, 0, 0]
 
   chart.setOption({
-    tooltip: { trigger: 'axis' },
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(10, 14, 39, 0.9)', borderColor: 'rgba(0, 200, 255, 0.3)', textStyle: { color: '#e0e6ed' } },
     grid: { left: 50, right: 20, top: 20, bottom: 30 },
     xAxis: {
       type: 'category',
       data: dates,
-      axisLine: { lineStyle: { color: '#e8e8e8' } },
-      axisLabel: { color: '#666' }
+      axisLine: { lineStyle: { color: '#2a3a5c' } },
+      axisLabel: { color: '#7eb8da' }
     },
     yAxis: {
       type: 'value',
       axisLine: { show: false },
       axisTick: { show: false },
-      splitLine: { lineStyle: { color: '#f0f0f0' } },
-      axisLabel: { color: '#666' }
+      splitLine: { lineStyle: { color: 'rgba(0, 200, 255, 0.08)' } },
+      axisLabel: { color: '#7eb8da' }
     },
     series: [{
       type: 'bar',
@@ -1035,8 +1036,8 @@ const initAlarmTrendOperationChart = () => {
       barWidth: 20,
       itemStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: '#f56c6c' },
-          { offset: 1, color: '#fbc4c4' }
+          { offset: 0, color: '#ff4d6a' },
+          { offset: 1, color: 'rgba(255, 77, 106, 0.3)' }
         ]),
         borderRadius: [4, 4, 0, 0]
       }
@@ -1056,7 +1057,7 @@ const initOnlineTimeRankChart = () => {
     : [{ name: '暂无数据', value: 0 }]
 
   chart.setOption({
-    tooltip: { trigger: 'axis' },
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(10, 14, 39, 0.9)', borderColor: 'rgba(0, 200, 255, 0.3)', textStyle: { color: '#e0e6ed' } },
     grid: { left: 100, right: 60, top: 10, bottom: 10 },
     xAxis: {
       type: 'value',
@@ -1068,7 +1069,7 @@ const initOnlineTimeRankChart = () => {
       data: data.map(d => d.name),
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { color: '#333' }
+      axisLabel: { color: '#7eb8da' }
     },
     series: [{
       type: 'bar',
@@ -1076,8 +1077,8 @@ const initOnlineTimeRankChart = () => {
       barWidth: 16,
       itemStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-          { offset: 0, color: '#67c23a' },
-          { offset: 1, color: '#95d475' }
+          { offset: 0, color: '#00ffc8' },
+          { offset: 1, color: 'rgba(0, 255, 200, 0.5)' }
         ]),
         borderRadius: [0, 8, 8, 0]
       },
@@ -1085,7 +1086,7 @@ const initOnlineTimeRankChart = () => {
         show: true,
         position: 'right',
         formatter: '{c}',
-        color: '#666'
+        color: '#7eb8da'
       }
     }]
   })
@@ -1098,21 +1099,22 @@ const initAlarmTypeChart = () => {
   const chart = echarts.init(alarmTypeChartRef.value)
   charts.push(chart)
 
-  const colors = ['#409eff', '#67c23a', '#e6a23c', '#f56c6c', '#909399']
+  const colors = ['#00d4ff', '#00ffc8', '#ffb800', '#ff4d6a', '#a855f7']
   const data = safetyChartData.value.alarmTypeDistribution.length > 0
     ? safetyChartData.value.alarmTypeDistribution.map((item, idx) => ({
         value: item.value,
         name: item.name,
         itemStyle: { color: colors[idx % colors.length] }
       }))
-    : [{ value: 0, name: '暂无数据', itemStyle: { color: '#909399' } }]
+    : [{ value: 0, name: '暂无数据', itemStyle: { color: '#4a6a8a' } }]
 
   chart.setOption({
-    tooltip: { trigger: 'item' },
+    tooltip: { trigger: 'item', backgroundColor: 'rgba(10, 14, 39, 0.9)', borderColor: 'rgba(0, 200, 255, 0.3)', textStyle: { color: '#e0e6ed' } },
     legend: {
       orient: 'vertical',
       right: 20,
-      top: 'center'
+      top: 'center',
+      textStyle: { color: '#7eb8da' }
     },
     series: [{
       type: 'pie',
@@ -1145,18 +1147,20 @@ const initAlarmTrendChart = () => {
     : [0, 0, 0, 0, 0, 0, 0]
 
   chart.setOption({
-    tooltip: { trigger: 'axis' },
-    legend: { data: ['ADAS', 'DSM', 'BSD'], top: 0 },
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(10, 14, 39, 0.9)', borderColor: 'rgba(0, 200, 255, 0.3)', textStyle: { color: '#e0e6ed' } },
+    legend: { data: ['ADAS', 'DSM', 'BSD'], top: 0, textStyle: { color: '#7eb8da' } },
     grid: { left: 50, right: 20, top: 40, bottom: 30 },
     xAxis: {
       type: 'category',
-      data: dates
+      data: dates,
+      axisLine: { lineStyle: { color: '#2a3a5c' } },
+      axisLabel: { color: '#7eb8da' }
     },
-    yAxis: { type: 'value' },
+    yAxis: { type: 'value', axisLine: { show: false }, axisTick: { show: false }, splitLine: { lineStyle: { color: 'rgba(0, 200, 255, 0.08)' } }, axisLabel: { color: '#7eb8da' } },
     series: [
-      { name: 'ADAS', type: 'line', data: adasData, itemStyle: { color: '#409eff' } },
-      { name: 'DSM', type: 'line', data: dsmData, itemStyle: { color: '#67c23a' } },
-      { name: 'BSD', type: 'line', data: bsdData, itemStyle: { color: '#e6a23c' } }
+      { name: 'ADAS', type: 'line', data: adasData, itemStyle: { color: '#00d4ff' }, lineStyle: { color: '#00d4ff' } },
+      { name: 'DSM', type: 'line', data: dsmData, itemStyle: { color: '#00ffc8' }, lineStyle: { color: '#00ffc8' } },
+      { name: 'BSD', type: 'line', data: bsdData, itemStyle: { color: '#ffb800' }, lineStyle: { color: '#ffb800' } }
     ]
   })
 }
@@ -1171,19 +1175,20 @@ const initAlarmHandleChart = () => {
   const handleStats = safetyChartData.value.alarmHandleStats
 
   chart.setOption({
-    tooltip: { trigger: 'item' },
+    tooltip: { trigger: 'item', backgroundColor: 'rgba(10, 14, 39, 0.9)', borderColor: 'rgba(0, 200, 255, 0.3)', textStyle: { color: '#e0e6ed' } },
     series: [{
       type: 'pie',
       radius: ['40%', '60%'],
       center: ['50%', '50%'],
       data: [
-        { value: handleStats.handled, name: '已处理', itemStyle: { color: '#67c23a' } },
-        { value: handleStats.unhandled, name: '未处理', itemStyle: { color: '#f56c6c' } },
-        { value: handleStats.processing, name: '处理中', itemStyle: { color: '#e6a23c' } }
+        { value: handleStats.handled, name: '已处理', itemStyle: { color: '#00ffc8' } },
+        { value: handleStats.unhandled, name: '未处理', itemStyle: { color: '#ff4d6a' } },
+        { value: handleStats.processing, name: '处理中', itemStyle: { color: '#ffb800' } }
       ],
       label: {
         show: true,
-        formatter: '{b}: {c}'
+        formatter: '{b}: {c}',
+        color: '#7eb8da'
       }
     }]
   })
@@ -1201,7 +1206,7 @@ const initAlarmVehicleRankChart = () => {
     : [{ name: '暂无数据', value: 0 }]
 
   chart.setOption({
-    tooltip: { trigger: 'axis' },
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(10, 14, 39, 0.9)', borderColor: 'rgba(0, 200, 255, 0.3)', textStyle: { color: '#e0e6ed' } },
     grid: { left: 100, right: 60, top: 10, bottom: 10 },
     xAxis: { type: 'value', show: false },
     yAxis: {
@@ -1210,7 +1215,7 @@ const initAlarmVehicleRankChart = () => {
       data: data.map(d => d.name),
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { color: '#333' }
+      axisLabel: { color: '#7eb8da' }
     },
     series: [{
       type: 'bar',
@@ -1218,8 +1223,8 @@ const initAlarmVehicleRankChart = () => {
       barWidth: 16,
       itemStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-          { offset: 0, color: '#f56c6c' },
-          { offset: 1, color: '#fbc4c4' }
+          { offset: 0, color: '#ff4d6a' },
+          { offset: 1, color: 'rgba(255, 77, 106, 0.4)' }
         ]),
         borderRadius: [0, 8, 8, 0]
       },
@@ -1227,7 +1232,7 @@ const initAlarmVehicleRankChart = () => {
         show: true,
         position: 'right',
         formatter: '{c}',
-        color: '#666'
+        color: '#7eb8da'
       }
     }]
   })
@@ -1249,20 +1254,20 @@ const initDrivingMileageChart = () => {
     : [0, 0, 0, 0, 0, 0, 0]
 
   chart.setOption({
-    tooltip: { trigger: 'axis' },
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(10, 14, 39, 0.9)', borderColor: 'rgba(0, 200, 255, 0.3)', textStyle: { color: '#e0e6ed' } },
     grid: { left: 60, right: 20, top: 20, bottom: 30 },
     xAxis: {
       type: 'category',
       data: dates,
-      axisLine: { lineStyle: { color: '#e8e8e8' } },
-      axisLabel: { color: '#666' }
+      axisLine: { lineStyle: { color: '#2a3a5c' } },
+      axisLabel: { color: '#7eb8da' }
     },
     yAxis: {
       type: 'value',
       axisLine: { show: false },
       axisTick: { show: false },
-      splitLine: { lineStyle: { color: '#f0f0f0' } },
-      axisLabel: { color: '#666' }
+      splitLine: { lineStyle: { color: 'rgba(0, 200, 255, 0.08)' } },
+      axisLabel: { color: '#7eb8da' }
     },
     series: [{
       type: 'bar',
@@ -1270,8 +1275,8 @@ const initDrivingMileageChart = () => {
       barWidth: 30,
       itemStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: '#409eff' },
-          { offset: 1, color: '#79bbff' }
+          { offset: 0, color: '#00d4ff' },
+          { offset: 1, color: 'rgba(0, 212, 255, 0.3)' }
         ]),
         borderRadius: [4, 4, 0, 0]
       }
@@ -1295,22 +1300,22 @@ const initMileageUtilizationChart = () => {
     : [0, 0, 0, 0, 0, 0, 0]
 
   chart.setOption({
-    tooltip: { trigger: 'axis', formatter: '{b}: {c}%' },
+    tooltip: { trigger: 'axis', formatter: '{b}: {c}%', backgroundColor: 'rgba(10, 14, 39, 0.9)', borderColor: 'rgba(0, 200, 255, 0.3)', textStyle: { color: '#e0e6ed' } },
     grid: { left: 60, right: 20, top: 20, bottom: 30 },
     xAxis: {
       type: 'category',
       boundaryGap: false,
       data: dates,
-      axisLine: { lineStyle: { color: '#e8e8e8' } },
-      axisLabel: { color: '#666' }
+      axisLine: { lineStyle: { color: '#2a3a5c' } },
+      axisLabel: { color: '#7eb8da' }
     },
     yAxis: {
       type: 'value',
       max: 100,
       axisLine: { show: false },
       axisTick: { show: false },
-      splitLine: { lineStyle: { color: '#f0f0f0' } },
-      axisLabel: { color: '#666', formatter: '{value}%' }
+      splitLine: { lineStyle: { color: 'rgba(0, 200, 255, 0.08)' } },
+      axisLabel: { color: '#7eb8da', formatter: '{value}%' }
     },
     series: [{
       type: 'line',
@@ -1319,12 +1324,12 @@ const initMileageUtilizationChart = () => {
       symbolSize: 6,
       areaStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: 'rgba(103, 194, 58, 0.3)' },
-          { offset: 1, color: 'rgba(103, 194, 58, 0.05)' }
+          { offset: 0, color: 'rgba(0, 255, 200, 0.25)' },
+          { offset: 1, color: 'rgba(0, 255, 200, 0.02)' }
         ])
       },
-      lineStyle: { color: '#67c23a', width: 2 },
-      itemStyle: { color: '#67c23a' },
+      lineStyle: { color: '#00ffc8', width: 2 },
+      itemStyle: { color: '#00ffc8' },
       data: values
     }]
   })
@@ -1338,7 +1343,7 @@ const initRankChart = (chartRef: HTMLElement | undefined, data: { name: string; 
   charts.push(chart)
 
   chart.setOption({
-    tooltip: { trigger: 'axis' },
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(10, 14, 39, 0.9)', borderColor: 'rgba(0, 200, 255, 0.3)', textStyle: { color: '#e0e6ed' } },
     grid: { left: 100, right: 60, top: 10, bottom: 10 },
     xAxis: { type: 'value', show: false },
     yAxis: {
@@ -1347,7 +1352,7 @@ const initRankChart = (chartRef: HTMLElement | undefined, data: { name: string; 
       data: data.map(d => d.name),
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { color: '#333' }
+      axisLabel: { color: '#7eb8da' }
     },
     series: [{
       type: 'bar',
@@ -1364,7 +1369,7 @@ const initRankChart = (chartRef: HTMLElement | undefined, data: { name: string; 
         show: true,
         position: 'right',
         formatter: '{c}',
-        color: '#666'
+        color: '#7eb8da'
       }
     }]
   })
@@ -1382,7 +1387,7 @@ const initDataRankCharts = () => {
     dataChartData.value.mileageOrderRank.length > 0
       ? dataChartData.value.mileageOrderRank
       : defaultData,
-    '#409eff', '#79bbff'
+    '#00d4ff', 'rgba(0, 212, 255, 0.4)'
   )
 
   // 里程营收排名
@@ -1391,7 +1396,7 @@ const initDataRankCharts = () => {
     dataChartData.value.mileageRevenueRank.length > 0
       ? dataChartData.value.mileageRevenueRank
       : defaultData,
-    '#67c23a', '#95d475'
+    '#00ffc8', 'rgba(0, 255, 200, 0.4)'
   )
 
   // 空驶里程排名
@@ -1400,7 +1405,7 @@ const initDataRankCharts = () => {
     dataChartData.value.emptyMileageRank.length > 0
       ? dataChartData.value.emptyMileageRank
       : defaultData,
-    '#e6a23c', '#f3d19e'
+    '#ffb800', 'rgba(255, 184, 0, 0.4)'
   )
 
   // 订单数目排名
@@ -1409,7 +1414,7 @@ const initDataRankCharts = () => {
     dataChartData.value.orderCountRank.length > 0
       ? dataChartData.value.orderCountRank
       : defaultData,
-    '#9b59b6', '#c39bd3'
+    '#a855f7', 'rgba(168, 85, 247, 0.4)'
   )
 }
 
@@ -1429,21 +1434,21 @@ const initRevenueTrendChart = () => {
     : [0, 0, 0, 0, 0, 0, 0]
 
   chart.setOption({
-    tooltip: { trigger: 'axis', formatter: '{b}: ¥{c}' },
+    tooltip: { trigger: 'axis', formatter: '{b}: ¥{c}', backgroundColor: 'rgba(10, 14, 39, 0.9)', borderColor: 'rgba(0, 200, 255, 0.3)', textStyle: { color: '#e0e6ed' } },
     grid: { left: 80, right: 20, top: 20, bottom: 30 },
     xAxis: {
       type: 'category',
       boundaryGap: false,
       data: dates,
-      axisLine: { lineStyle: { color: '#e8e8e8' } },
-      axisLabel: { color: '#666' }
+      axisLine: { lineStyle: { color: '#2a3a5c' } },
+      axisLabel: { color: '#7eb8da' }
     },
     yAxis: {
       type: 'value',
       axisLine: { show: false },
       axisTick: { show: false },
-      splitLine: { lineStyle: { color: '#f0f0f0' } },
-      axisLabel: { color: '#666' }
+      splitLine: { lineStyle: { color: 'rgba(0, 200, 255, 0.08)' } },
+      axisLabel: { color: '#7eb8da' }
     },
     series: [{
       type: 'line',
@@ -1452,12 +1457,12 @@ const initRevenueTrendChart = () => {
       symbolSize: 6,
       areaStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: 'rgba(155, 89, 182, 0.3)' },
-          { offset: 1, color: 'rgba(155, 89, 182, 0.05)' }
+          { offset: 0, color: 'rgba(168, 85, 247, 0.25)' },
+          { offset: 1, color: 'rgba(168, 85, 247, 0.02)' }
         ])
       },
-      lineStyle: { color: '#9b59b6', width: 2 },
-      itemStyle: { color: '#9b59b6' },
+      lineStyle: { color: '#a855f7', width: 2 },
+      itemStyle: { color: '#a855f7' },
       data: values
     }]
   })
@@ -1534,26 +1539,50 @@ onUnmounted(() => {
 })
 </script>
 
+
 <style lang="scss" scoped>
+/* === Dark Tech Theme Animations === */
+@keyframes techPulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+@keyframes techGlow {
+  0%, 100% { box-shadow: 0 0 5px rgba(0, 212, 255, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.6); }
+}
+
+@keyframes scanLine {
+  0% { background-position: 0 -100%; }
+  100% { background-position: 0 200%; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .dashboard-page {
   display: flex;
   height: 100%;
-  background: #f0f2f5;
+  background: linear-gradient(135deg, #0a0e27 0%, #0d1b2a 100%);
+  color: #e0e6ed;
 }
 
 .dashboard-sidebar {
   width: 280px;
-  background: #fff;
-  border-right: 1px solid #e8e8e8;
+  background: rgba(10, 14, 39, 0.95);
+  border-right: 1px solid rgba(0, 200, 255, 0.15);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  box-shadow: 2px 0 15px rgba(0, 200, 255, 0.05);
 
   .sidebar-filters {
     display: flex;
     gap: 8px;
     padding: 12px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid rgba(0, 200, 255, 0.1);
 
     .el-select {
       flex: 1;
@@ -1564,7 +1593,7 @@ onUnmounted(() => {
     display: flex;
     gap: 8px;
     padding: 12px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid rgba(0, 200, 255, 0.1);
 
     .el-input {
       flex: 1;
@@ -1580,7 +1609,97 @@ onUnmounted(() => {
       display: flex;
       align-items: center;
       gap: 6px;
+      color: #7eb8da;
     }
+  }
+}
+
+/* Deep selectors for Element Plus dark theme */
+:deep(.el-select) {
+  .el-input__wrapper {
+    background: rgba(10, 18, 42, 0.8) !important;
+    border-color: rgba(0, 200, 255, 0.15) !important;
+    box-shadow: none !important;
+  }
+  .el-input__inner {
+    color: #7eb8da !important;
+  }
+  .el-select__caret {
+    color: #4a6a8a !important;
+  }
+}
+
+:deep(.el-input) {
+  .el-input__wrapper {
+    background: rgba(10, 18, 42, 0.8) !important;
+    border-color: rgba(0, 200, 255, 0.15) !important;
+    box-shadow: none !important;
+  }
+  .el-input__inner {
+    color: #7eb8da !important;
+  }
+  .el-input__prefix .el-icon {
+    color: #4a6a8a !important;
+  }
+}
+
+:deep(.el-button) {
+  &.el-button--primary {
+    background: rgba(0, 212, 255, 0.2);
+    border-color: rgba(0, 212, 255, 0.4);
+    color: #00d4ff;
+
+    &:hover {
+      background: rgba(0, 212, 255, 0.3);
+    }
+  }
+}
+
+:deep(.el-tree) {
+  background: transparent !important;
+  color: #7eb8da;
+
+  .el-tree-node__content:hover {
+    background: rgba(0, 200, 255, 0.08) !important;
+  }
+
+  .el-tree-node.is-current > .el-tree-node__content {
+    background: rgba(0, 200, 255, 0.12) !important;
+  }
+
+  .el-tree-node__expand-icon {
+    color: #4a6a8a;
+  }
+}
+
+:deep(.el-button-group) {
+  .el-button {
+    background: rgba(10, 18, 42, 0.8) !important;
+    border-color: rgba(0, 200, 255, 0.15) !important;
+    color: #7eb8da !important;
+
+    &.el-button--primary,
+    &.is-active {
+      background: rgba(0, 212, 255, 0.2) !important;
+      border-color: rgba(0, 212, 255, 0.4) !important;
+      color: #00d4ff !important;
+    }
+  }
+}
+
+:deep(.el-radio-group) {
+  .el-radio-button__inner {
+    background: rgba(10, 18, 42, 0.8);
+    border-color: rgba(0, 200, 255, 0.15);
+    color: #7eb8da;
+    box-shadow: none !important;
+  }
+
+  .el-radio-button__original-radio:checked + .el-radio-button__inner {
+    background: rgba(0, 212, 255, 0.2);
+    border-color: rgba(0, 212, 255, 0.4);
+    color: #00d4ff;
+    box-shadow: none !important;
   }
 }
 
@@ -1588,6 +1707,10 @@ onUnmounted(() => {
   flex: 1;
   overflow: auto;
   padding: 16px;
+  background-image:
+    linear-gradient(rgba(0, 200, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 200, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
 
   .dashboard-tabs {
     margin-bottom: 16px;
@@ -1599,22 +1722,27 @@ onUnmounted(() => {
 
       .tab-item {
         font-size: 16px;
-        color: #333;
+        color: #7eb8da;
         cursor: pointer;
         padding: 4px 8px;
+        transition: all 0.3s ease;
+        border-bottom: 2px solid transparent;
 
         &:hover {
-          color: #409eff;
+          color: #00d4ff;
         }
 
         &.active {
-          color: #409eff;
+          color: #00d4ff;
           font-weight: 500;
+          text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+          border-bottom: 2px solid #00d4ff;
+          box-shadow: 0 2px 8px rgba(0, 212, 255, 0.2);
         }
       }
 
       .tab-divider {
-        color: #ddd;
+        color: #2a3a5c;
       }
     }
   }
@@ -1630,8 +1758,9 @@ onUnmounted(() => {
     .section-title {
       font-size: 14px;
       font-weight: 500;
-      color: #333;
+      color: #00d4ff;
       margin-bottom: 12px;
+      text-shadow: 0 0 8px rgba(0, 212, 255, 0.3);
     }
 
     .ai-alarm-cards {
@@ -1640,27 +1769,62 @@ onUnmounted(() => {
       gap: 12px;
 
       .ai-alarm-card {
-        background: #fff;
+        background: rgba(10, 18, 42, 0.8);
         border-radius: 8px;
         padding: 16px;
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        border: 1px solid rgba(0, 200, 255, 0.15);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+
+        &:hover {
+          border-color: rgba(0, 200, 255, 0.4);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 20px rgba(0, 200, 255, 0.15);
+        }
+
+        // Tech corner decorations
+        &::before, &::after {
+          content: '';
+          position: absolute;
+          width: 8px;
+          height: 8px;
+          border-color: rgba(0, 212, 255, 0.4);
+          border-style: solid;
+        }
+
+        &::before {
+          top: 4px;
+          left: 4px;
+          border-width: 1px 0 0 1px;
+        }
+
+        &::after {
+          bottom: 4px;
+          right: 4px;
+          border-width: 0 1px 1px 0;
+        }
 
         &.total {
-          background: linear-gradient(135deg, #409eff, #67c23a);
+          background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(0, 255, 200, 0.1));
+          border-color: rgba(0, 212, 255, 0.3);
 
           .ai-alarm-icon {
-            background: rgba(255, 255, 255, 0.2);
-            color: #fff;
+            background: rgba(0, 212, 255, 0.2);
+            color: #00d4ff;
           }
 
           .ai-alarm-info {
             .ai-alarm-label,
             .ai-alarm-value {
-              color: #fff;
+              color: #00d4ff;
+            }
+            .ai-alarm-value {
+              text-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
             }
           }
         }
@@ -1673,15 +1837,16 @@ onUnmounted(() => {
           align-items: center;
           justify-content: center;
           font-size: 20px;
-          background: #f0f2f5;
-          color: #409eff;
+          background: rgba(0, 200, 255, 0.08);
+          color: #00d4ff;
+          animation: techPulse 3s ease-in-out infinite;
 
-          &.blue { background: #ecf5ff; color: #409eff; }
-          &.orange { background: #fdf6ec; color: #e6a23c; }
-          &.purple { background: #f4ecfb; color: #9b59b6; }
-          &.red { background: #fef0f0; color: #f56c6c; }
-          &.green { background: #f0f9eb; color: #67c23a; }
-          &.cyan { background: #e6f7ff; color: #00bcd4; }
+          &.blue { background: rgba(0, 212, 255, 0.1); color: #00d4ff; }
+          &.orange { background: rgba(255, 184, 0, 0.1); color: #ffb800; }
+          &.purple { background: rgba(168, 85, 247, 0.1); color: #a855f7; }
+          &.red { background: rgba(255, 77, 106, 0.1); color: #ff4d6a; }
+          &.green { background: rgba(0, 255, 136, 0.1); color: #00ff88; }
+          &.cyan { background: rgba(0, 255, 200, 0.1); color: #00ffc8; }
         }
 
         .ai-alarm-info {
@@ -1689,14 +1854,15 @@ onUnmounted(() => {
 
           .ai-alarm-label {
             font-size: 12px;
-            color: #666;
+            color: #7eb8da;
             margin-bottom: 4px;
           }
 
           .ai-alarm-value {
             font-size: 20px;
             font-weight: 600;
-            color: #333;
+            color: #e0e6ed;
+            font-variant-numeric: tabular-nums;
           }
         }
       }
@@ -1708,10 +1874,10 @@ onUnmounted(() => {
     margin-bottom: 16px;
 
     .el-radio-group {
-      background: #fff;
+      background: rgba(10, 18, 42, 0.8);
       padding: 8px;
       border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(0, 200, 255, 0.1);
     }
   }
 
@@ -1731,13 +1897,44 @@ onUnmounted(() => {
     }
 
     .stat-card {
-      background: #fff;
+      background: rgba(10, 18, 42, 0.8);
       border-radius: 8px;
       padding: 20px;
       display: flex;
       align-items: center;
       gap: 16px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(0, 200, 255, 0.15);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+
+      &:hover {
+        border-color: rgba(0, 200, 255, 0.4);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0, 200, 255, 0.15);
+      }
+
+      // Tech corner decorations
+      &::before, &::after {
+        content: '';
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        border-color: rgba(0, 212, 255, 0.4);
+        border-style: solid;
+      }
+
+      &::before {
+        top: 4px;
+        left: 4px;
+        border-width: 1px 0 0 1px;
+      }
+
+      &::after {
+        bottom: 4px;
+        right: 4px;
+        border-width: 0 1px 1px 0;
+      }
 
       &.mini {
         padding: 12px;
@@ -1769,59 +1966,62 @@ onUnmounted(() => {
         justify-content: center;
         font-size: 28px;
         color: #fff;
+        animation: techPulse 3s ease-in-out infinite;
 
-        &.blue { background: #409eff; }
-        &.orange { background: #e6a23c; }
-        &.cyan { background: #00bcd4; }
-        &.green { background: #67c23a; }
-        &.yellow { background: #f4d03f; }
-        &.red { background: #f56c6c; }
-        &.purple { background: #9b59b6; }
-        &.teal { background: #20c997; }
+        &.blue { background: rgba(0, 212, 255, 0.2); color: #00d4ff; box-shadow: 0 0 12px rgba(0, 212, 255, 0.3); }
+        &.orange { background: rgba(255, 184, 0, 0.2); color: #ffb800; box-shadow: 0 0 12px rgba(255, 184, 0, 0.3); }
+        &.cyan { background: rgba(0, 255, 200, 0.2); color: #00ffc8; box-shadow: 0 0 12px rgba(0, 255, 200, 0.3); }
+        &.green { background: rgba(0, 255, 136, 0.2); color: #00ff88; box-shadow: 0 0 12px rgba(0, 255, 136, 0.3); }
+        &.yellow { background: rgba(240, 224, 48, 0.2); color: #f0e030; box-shadow: 0 0 12px rgba(240, 224, 48, 0.3); }
+        &.red { background: rgba(255, 77, 106, 0.2); color: #ff4d6a; box-shadow: 0 0 12px rgba(255, 77, 106, 0.3); }
+        &.purple { background: rgba(168, 85, 247, 0.2); color: #a855f7; box-shadow: 0 0 12px rgba(168, 85, 247, 0.3); }
+        &.teal { background: rgba(0, 255, 200, 0.2); color: #00ffc8; box-shadow: 0 0 12px rgba(0, 255, 200, 0.3); }
       }
 
       .stat-info {
         .stat-label {
           font-size: 13px;
-          color: #666;
+          color: #7eb8da;
           margin-bottom: 4px;
         }
 
         .stat-value {
           font-size: 28px;
           font-weight: 600;
-          color: #333;
+          color: #e0e6ed;
+          font-variant-numeric: tabular-nums;
+          text-shadow: 0 0 10px rgba(0, 200, 255, 0.3);
 
-          &.blue { color: #409eff; }
-          &.orange { color: #e6a23c; }
-          &.green { color: #67c23a; }
-          &.red { color: #f56c6c; }
-          &.purple { color: #9b59b6; }
+          &.blue { color: #00d4ff; text-shadow: 0 0 10px rgba(0, 212, 255, 0.5); }
+          &.orange { color: #ffb800; text-shadow: 0 0 10px rgba(255, 184, 0, 0.5); }
+          &.green { color: #00ff88; text-shadow: 0 0 10px rgba(0, 255, 136, 0.5); }
+          &.red { color: #ff4d6a; text-shadow: 0 0 10px rgba(255, 77, 106, 0.5); }
+          &.purple { color: #a855f7; text-shadow: 0 0 10px rgba(168, 85, 247, 0.5); }
         }
       }
     }
   }
 
   .mileage-card {
-    background: #fff;
+    background: rgba(10, 18, 42, 0.8);
     border-radius: 8px;
     padding: 20px;
     display: flex;
     align-items: center;
     gap: 16px;
     margin-bottom: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 200, 255, 0.15);
 
     .mileage-icon {
       width: 48px;
       height: 48px;
       border-radius: 8px;
-      background: #409eff;
+      background: rgba(0, 212, 255, 0.2);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 24px;
-      color: #fff;
+      color: #00d4ff;
     }
 
     .mileage-info {
@@ -1829,13 +2029,15 @@ onUnmounted(() => {
 
       .mileage-label {
         font-size: 13px;
-        color: #666;
+        color: #7eb8da;
       }
 
       .mileage-value {
         font-size: 32px;
         font-weight: 600;
-        color: #409eff;
+        color: #00d4ff;
+        font-variant-numeric: tabular-nums;
+        text-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
       }
     }
 
@@ -1843,12 +2045,12 @@ onUnmounted(() => {
       width: 48px;
       height: 48px;
       border-radius: 50%;
-      border: 2px solid #e8e8e8;
+      border: 2px solid rgba(0, 200, 255, 0.3);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 24px;
-      color: #409eff;
+      color: #00d4ff;
     }
   }
 
@@ -1873,9 +2075,40 @@ onUnmounted(() => {
     }
 
     .chart-card {
-      background: #fff;
+      background: rgba(10, 18, 42, 0.8);
       border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(0, 200, 255, 0.15);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+
+      &:hover {
+        border-color: rgba(0, 200, 255, 0.3);
+        box-shadow: 0 4px 20px rgba(0, 200, 255, 0.1);
+      }
+
+      // Tech corner decorations
+      &::before, &::after {
+        content: '';
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        border-color: rgba(0, 212, 255, 0.3);
+        border-style: solid;
+        z-index: 1;
+      }
+
+      &::before {
+        top: 4px;
+        left: 4px;
+        border-width: 1px 0 0 1px;
+      }
+
+      &::after {
+        bottom: 4px;
+        right: 4px;
+        border-width: 0 1px 1px 0;
+      }
 
       &.full-width {
         grid-column: 1 / -1;
@@ -1883,25 +2116,39 @@ onUnmounted(() => {
 
       .chart-header {
         padding: 12px 16px;
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid rgba(0, 200, 255, 0.1);
         display: flex;
         justify-content: space-between;
         align-items: center;
+        position: relative;
+
+        // Tech left decoration line (gradient bar)
+        &::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 8px;
+          bottom: 8px;
+          width: 3px;
+          background: linear-gradient(180deg, #00d4ff, #00ffc8);
+          border-radius: 0 2px 2px 0;
+        }
 
         .chart-title {
           font-size: 14px;
           font-weight: 500;
-          color: #333;
+          color: #e0e6ed;
+          padding-left: 8px;
         }
 
         .chart-legend {
           display: flex;
           gap: 16px;
           font-size: 12px;
-          color: #666;
+          color: #7eb8da;
 
           .legend-text {
-            color: #999;
+            color: #7eb8da;
           }
         }
 
@@ -1909,10 +2156,10 @@ onUnmounted(() => {
           display: flex;
           gap: 20px;
           font-size: 13px;
-          color: #666;
+          color: #7eb8da;
 
           strong {
-            color: #333;
+            color: #00d4ff;
             margin-left: 4px;
           }
         }
@@ -1953,16 +2200,17 @@ onUnmounted(() => {
               align-items: center;
               gap: 8px;
               font-size: 12px;
-              color: #666;
+              color: #7eb8da;
 
               .dot {
                 width: 10px;
                 height: 10px;
                 border-radius: 50%;
+                box-shadow: 0 0 6px currentColor;
 
-                &.blue { background: #409eff; }
-                &.purple { background: #9b59b6; }
-                &.cyan { background: #00bcd4; }
+                &.blue { background: #00d4ff; color: #00d4ff; }
+                &.purple { background: #a855f7; color: #a855f7; }
+                &.cyan { background: #00ffc8; color: #00ffc8; }
               }
             }
           }
@@ -1982,11 +2230,6 @@ onUnmounted(() => {
       }
     }
   }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 @media (max-width: 1600px) {
