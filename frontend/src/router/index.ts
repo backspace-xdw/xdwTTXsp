@@ -52,12 +52,6 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '多车轨迹', icon: 'track' }
       },
       {
-        path: 'safety-cal',
-        name: 'SafetyCal',
-        component: () => import('@/views/safety-cal/index.vue'),
-        meta: { title: 'Safety CAL', icon: 'calculator' }
-      },
-      {
         path: 'safety-manage',
         name: 'SafetyManage',
         component: () => import('@/views/safety-manage/index.vue'),
