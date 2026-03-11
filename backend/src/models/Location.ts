@@ -142,7 +142,13 @@ Location.init(
       {
         name: 'idx_alarm_flag',
         fields: ['alarm_flag'],
-        where: { alarm_flag: { $gt: 0 } }  // 部分索引，只索引有报警的
+        using: 'BTREE'
+      },
+      // 超速报表查询优化 (速度+时间范围)
+      {
+        name: 'idx_speed_gps_time',
+        fields: ['speed', 'gps_time'],
+        using: 'BTREE'
       }
     ]
   }

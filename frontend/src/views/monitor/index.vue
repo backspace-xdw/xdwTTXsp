@@ -2286,7 +2286,7 @@ const switchToAlarm = (index: number) => {
   if (index < alarmQueue.value.length) {
     // 将指定报警移到队首
     const alarm = alarmQueue.value.splice(index, 1)[0]
-    alarmQueue.value.unshift(alarm)
+    if (alarm) alarmQueue.value.unshift(alarm)
   }
 }
 

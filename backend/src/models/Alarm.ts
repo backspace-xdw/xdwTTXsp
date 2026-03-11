@@ -157,6 +157,7 @@ Alarm.init(
     updatedAt: false,
     indexes: [
       { fields: ['device_id', 'gps_time'] },
+      { fields: ['alarm_type', 'gps_time'] },
       { fields: ['alarm_type'] },
       { fields: ['status'] },
       { fields: ['created_at'] }

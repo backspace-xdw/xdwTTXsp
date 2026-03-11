@@ -2,21 +2,9 @@ import { Router, Request, Response } from 'express'
 import { Device, DeviceRealtime, Location, Vehicle, Company } from '../models'
 import { Op } from 'sequelize'
 import * as cache from '../services/cacheService'
+import { formatDateTime } from '../utils/format'
 
 const router = Router()
-
-// 格式化日期时间
-function formatDateTime(date: Date | null | undefined): string {
-  if (!date) return ''
-  const d = new Date(date)
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  const h = String(d.getHours()).padStart(2, '0')
-  const min = String(d.getMinutes()).padStart(2, '0')
-  const s = String(d.getSeconds()).padStart(2, '0')
-  return `${y}-${m}-${day} ${h}:${min}:${s}`
-}
 
 // 确定车辆运营状态
 function getVehicleStatus(realtime: DeviceRealtime | null): string {
@@ -179,6 +167,47 @@ router.get('/realtime/all', async (req: Request, res: Response) => {
       code: 500,
       message: 'Failed to get realtime locations'
     })
+  }
+})
+
+// 车辆统计 (必须在 /:id 之前定义，否则被动态路由拦截)
+router.get('/stats/overview', async (req: Request, res: Response) => {
+  try {
+    const cachedData = await cache.getStats()
+    if (cachedData) {
+      return res.json(cachedData)
+    }
+
+    const devices = await Device.findAll({
+      include: [{ model: DeviceRealtime, as: 'realtime', required: false }]
+    })
+
+    let online = 0, driving = 0, parkingAccOn = 0, accOff = 0, alarm = 0
+    devices.forEach((device: any) => {
+      const realtime = device.realtime
+      if (realtime?.is_online) {
+        online++
+        if (realtime.alarm_flag > 0) alarm++
+        else if (realtime.speed > 0) driving++
+        else if (realtime.acc_on) parkingAccOn++
+        else accOff++
+      }
+    })
+
+    const total = devices.length
+    const response = {
+      code: 0,
+      data: {
+        total, online, offline: total - online,
+        driving, parkingAccOn, accOff, alarm,
+        onlineRate: total > 0 ? ((online / total) * 100).toFixed(2) : '0.00'
+      }
+    }
+    await cache.setStats(response)
+    res.json(response)
+  } catch (error) {
+    console.error('[Vehicle] 获取统计失败:', error)
+    res.status(500).json({ code: 500, message: 'Failed to get stats' })
   }
 })
 
@@ -375,74 +404,6 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
   return R * c
 }
 
-// 车辆统计
-router.get('/stats/overview', async (req: Request, res: Response) => {
-  try {
-    // 尝试从缓存获取
-    const cachedData = await cache.getStats()
-    if (cachedData) {
-      console.log('[Vehicle] Cache hit for stats')
-      return res.json(cachedData)
-    }
 
-    const devices = await Device.findAll({
-      include: [{
-        model: DeviceRealtime,
-        as: 'realtime',
-        required: false
-      }]
-    })
-
-    let online = 0
-    let driving = 0
-    let parkingAccOn = 0
-    let accOff = 0
-    let alarm = 0
-
-    devices.forEach((device: any) => {
-      const realtime = device.realtime
-      if (realtime?.is_online) {
-        online++
-        if (realtime.alarm_flag > 0) {
-          alarm++
-        } else if (realtime.speed > 0) {
-          driving++
-        } else if (realtime.acc_on) {
-          parkingAccOn++
-        } else {
-          accOff++
-        }
-      }
-    })
-
-    const total = devices.length
-    const offline = total - online
-
-    const response = {
-      code: 0,
-      data: {
-        total,
-        online,
-        offline,
-        driving,
-        parkingAccOn,
-        accOff,
-        alarm,
-        onlineRate: total > 0 ? ((online / total) * 100).toFixed(2) : '0.00'
-      }
-    }
-
-    // 缓存结果 (60秒)
-    await cache.setStats(response)
-
-    res.json(response)
-  } catch (error) {
-    console.error('[Vehicle] 获取统计失败:', error)
-    res.status(500).json({
-      code: 500,
-      message: 'Failed to get stats'
-    })
-  }
-})
 
 export default router

@@ -18,6 +18,7 @@ import reportRoutes from './routes/report'
 import dashboardRoutes from './routes/dashboard'
 import streamRoutes from './routes/stream'
 import operationsRoutes from './routes/operations'
+import { authMiddleware } from './middleware/auth'
 
 // 导入WebSocket处理
 import { setupWebSocket, broadcastGpsUpdate, broadcastAlarm, broadcastDeviceStatus } from './websocket'
@@ -53,20 +54,25 @@ const io = new SocketIOServer(httpServer, {
 
 // 中间件
 app.use(helmet())
-app.use(cors())
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || 'http://localhost:8090',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}))
 app.use(morgan('dev'))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
 // API路由
 app.use('/api/auth', authRoutes)
-app.use('/api/vehicles', vehicleRoutes)
-app.use('/api/companies', companyRoutes)
-app.use('/api/alarms', alarmRoutes)
-app.use('/api/reports', reportRoutes)
-app.use('/api/dashboard', dashboardRoutes)
-app.use('/api/stream', streamRoutes)
-app.use('/api/operations', operationsRoutes)
+// 以下路由需要 JWT 认证
+app.use('/api/vehicles', authMiddleware, vehicleRoutes)
+app.use('/api/companies', authMiddleware, companyRoutes)
+app.use('/api/alarms', authMiddleware, alarmRoutes)
+app.use('/api/reports', authMiddleware, reportRoutes)
+app.use('/api/dashboard', authMiddleware, dashboardRoutes)
+app.use('/api/stream', authMiddleware, streamRoutes)
+app.use('/api/operations', authMiddleware, operationsRoutes)
 
 // 健康检查
 app.get('/api/health', (req, res) => {

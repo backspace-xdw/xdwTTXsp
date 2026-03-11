@@ -160,14 +160,14 @@ const vehicleStore = useVehicleStore()
 
 const sidebarCollapsed = ref(false)
 const activeTab = ref('')
-const messageCount = ref(130)
+const messageCount = ref(0)
 
-// 导航菜单配置
-const navMenus = [
+// 导航菜单配置 (badge 使用动态数据)
+const navMenus = computed(() => [
   { path: '/dashboard', label: '仪表盘', icon: DataAnalysis },
-  { path: '/monitor', label: '实时监控', icon: Monitor, badge: 134 },
+  { path: '/monitor', label: '实时监控', icon: Monitor, badge: vehicleStore.stats.online || null },
   { path: '/group-mon', label: '分组监控', icon: Grid },
-  { path: '/ai-safe', label: '报警监控', icon: Warning },
+  { path: '/ai-safe', label: '报警监控', icon: Warning, badge: vehicleStore.stats.alarm || null },
   { path: '/replay', label: '轨迹回放', icon: Refresh },
   { path: '/multi-track', label: '多车轨迹', icon: Film },
   { path: '/safety-manage', label: '安全管理', icon: Setting },
@@ -176,12 +176,12 @@ const navMenus = [
   { path: '/operations', label: '运营管理', icon: Operation },
   { path: '/rules', label: '规则设置', icon: List },
   { path: '/server', label: '服务管理', icon: Connection }
-]
+])
 
-// 统计数据
-const stats = ref({
-  storageAlarm: 27
-})
+// 统计数据 (从 store 动态获取)
+const stats = computed(() => ({
+  storageAlarm: vehicleStore.stats.alarm
+}))
 
 // 当前路由
 const currentRoute = computed(() => route.path)

@@ -42,9 +42,16 @@ export async function initRedis(): Promise<void> {
       isConnected = false
     })
 
-    await redisClient.connect()
-  } catch (error) {
-    console.error('[Cache] Failed to connect to Redis:', error)
+    // 设置连接超时，避免Redis不可用时阻塞服务器启动
+    await Promise.race([
+      redisClient.connect(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Redis connection timeout (3s)')), 3000))
+    ])
+  } catch (error: any) {
+    console.warn('[Cache] Failed to connect to Redis:', error?.message || error)
+    if (redisClient) {
+      try { await redisClient.disconnect() } catch {}
+    }
     redisClient = null
     isConnected = false
   }
@@ -219,6 +226,60 @@ export async function invalidateVehicleCache(): Promise<void> {
   await delByPattern('vehicles:*')
 }
 
+// ========== 内存缓存 (Redis不可用时的降级方案) ==========
+
+const memoryCache = new Map<string, { data: any; expires: number }>()
+
+/** 清理过期条目 (每10分钟自动清理) */
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, entry] of memoryCache) {
+    if (now > entry.expires) memoryCache.delete(key)
+  }
+}, 10 * 60 * 1000)
+
+export function getMemoryCache<T>(key: string): T | null {
+  const entry = memoryCache.get(key)
+  if (!entry) return null
+  if (Date.now() > entry.expires) {
+    memoryCache.delete(key)
+    return null
+  }
+  return entry.data as T
+}
+
+export function setMemoryCache(key: string, data: any, ttlSeconds: number): void {
+  memoryCache.set(key, { data, expires: Date.now() + ttlSeconds * 1000 })
+}
+
+// ========== 报表缓存方法 ==========
+
+const REPORT_CACHE_TTL = 300 // 5分钟
+
+export function reportCacheKey(tab: string, params: Record<string, any>): string {
+  const sorted = Object.keys(params)
+    .filter(k => k !== 'page' && k !== 'pageSize')
+    .sort()
+    .map(k => `${k}=${params[k]}`)
+    .join('&')
+  return `report:${tab}:${sorted}`
+}
+
+export async function getReportCache<T>(key: string): Promise<T | null> {
+  if (isCacheAvailable()) {
+    return get<T>(key)
+  }
+  return getMemoryCache<T>(key)
+}
+
+export async function setReportCache(key: string, data: any): Promise<void> {
+  if (isCacheAvailable()) {
+    await set(key, data, REPORT_CACHE_TTL)
+  } else {
+    setMemoryCache(key, data, REPORT_CACHE_TTL)
+  }
+}
+
 export default {
   initRedis,
   closeRedis,
@@ -236,4 +297,9 @@ export default {
   getStats,
   setStats,
   invalidateVehicleCache,
+  getMemoryCache,
+  setMemoryCache,
+  reportCacheKey,
+  getReportCache,
+  setReportCache,
 }

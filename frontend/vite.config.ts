@@ -5,6 +5,7 @@ import path from 'path'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [vue()],
+  base: '/ttxsp/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src')
@@ -15,11 +16,11 @@ export default defineConfig({
     host: '0.0.0.0',
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:8081',
         changeOrigin: true
       },
       '/socket.io': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:8081',
         changeOrigin: true,
         ws: true
       }

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import jwt, { SignOptions } from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
+import { authMiddleware, AuthRequest } from '../middleware/auth'
 
 // JWT 配置
 const JWT_SECRET = process.env.JWT_SECRET || 'secret-key'
@@ -35,90 +36,52 @@ router.post('/login', async (req: Request, res: Response) => {
       })
     }
 
-    // 查找用户
     const user = mockUsers.find(u => u.username === username)
-
-    // 模拟登录：接受任何6位以上密码
-    if (!user && password.length >= 6) {
-      // 创建模拟用户
-      const mockUser = {
-        id: Date.now(),
-        username,
-        nickname: username,
-        role: 'user',
-        companyId: 1,
-        companyName: 'Monitoring Center'
-      }
-
-      const token = jwt.sign(
-        { userId: mockUser.id, username: mockUser.username },
-        JWT_SECRET,
-        JWT_OPTIONS
-      )
-
-      return res.json({
-        code: 0,
-        message: 'Login successful',
-        data: {
-          token,
-          user: mockUser
-        }
-      })
+    if (!user) {
+      return res.status(401).json({ code: 401, message: 'Invalid credentials' })
     }
 
-    if (user) {
-      const token = jwt.sign(
-        { userId: user.id, username: user.username },
-        JWT_SECRET,
-        JWT_OPTIONS
-      )
-
-      const { password: _, ...userWithoutPassword } = user
-
-      return res.json({
-        code: 0,
-        message: 'Login successful',
-        data: {
-          token,
-          user: userWithoutPassword
-        }
-      })
+    const valid = await bcrypt.compare(password, user.password)
+    if (!valid) {
+      return res.status(401).json({ code: 401, message: 'Invalid credentials' })
     }
 
-    res.status(401).json({
-      code: 401,
-      message: 'Invalid credentials'
+    const token = jwt.sign(
+      { userId: user.id, username: user.username },
+      JWT_SECRET,
+      JWT_OPTIONS
+    )
+
+    const { password: _, ...userWithoutPassword } = user
+
+    return res.json({
+      code: 0,
+      message: 'Login successful',
+      data: { token, user: userWithoutPassword }
     })
   } catch (error) {
     console.error('Login error:', error)
-    res.status(500).json({
-      code: 500,
-      message: 'Internal server error'
-    })
+    res.status(500).json({ code: 500, message: 'Internal server error' })
   }
 })
 
 // 退出登录
 router.post('/logout', (req: Request, res: Response) => {
-  res.json({
-    code: 0,
-    message: 'Logout successful'
-  })
+  res.json({ code: 0, message: 'Logout successful' })
 })
 
-// 获取当前用户信息
-router.get('/user', (req: Request, res: Response) => {
-  // 从token获取用户信息 (实际需要验证token)
+// 获取当前用户信息 (需要有效 token)
+router.get('/user', authMiddleware, (req: AuthRequest, res: Response) => {
+  const { userId, username } = req.user!
+  const user = mockUsers.find(u => u.id === userId)
+  if (user) {
+    const { password: _, ...userWithoutPassword } = user
+    return res.json({ code: 0, data: userWithoutPassword })
+  }
+  // token 有效但用户不存在 (可能已被删除)
   res.json({
     code: 0,
-    data: {
-      id: 1,
-      username: 'admin',
-      nickname: 'Admin',
-      role: 'admin',
-      companyId: 1,
-      companyName: 'Monitoring Center'
-    }
+    data: { id: userId, username, nickname: username, role: 'user', companyId: 1, companyName: 'Monitoring Center' }
   })
 })
 

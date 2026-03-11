@@ -77,6 +77,7 @@ export { Vehicle } from './Vehicle'
 export { Driver } from './Driver'
 export { Company } from './Company'
 export { User } from './User'
+export { Role } from './Role'
 export { DeviceRealtime } from './DeviceRealtime'
 
 // 导入模型用于关联设置
@@ -84,6 +85,8 @@ import { Device } from './Device'
 import { DeviceRealtime } from './DeviceRealtime'
 import { Driver } from './Driver'
 import { Company } from './Company'
+import { User } from './User'
+import { Role } from './Role'
 
 // 设置模型关联
 DeviceRealtime.belongsTo(Device, {
@@ -107,4 +110,26 @@ Driver.belongsTo(Company, {
 Company.hasMany(Driver, {
   foreignKey: 'company_id',
   as: 'drivers'
+})
+
+// 用户-角色关联
+User.belongsTo(Role, {
+  foreignKey: 'role_id',
+  as: 'role'
+})
+
+Role.hasMany(User, {
+  foreignKey: 'role_id',
+  as: 'users'
+})
+
+// 用户-企业关联
+User.belongsTo(Company, {
+  foreignKey: 'company_id',
+  as: 'company'
+})
+
+Company.hasMany(User, {
+  foreignKey: 'company_id',
+  as: 'users'
 })

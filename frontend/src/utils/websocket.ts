@@ -11,6 +11,7 @@ import { ref, readonly } from 'vue'
 
 // WebSocket服务端地址 - 使用当前页面origin，通过nginx代理
 const WS_URL = import.meta.env.VITE_WS_URL || window.location.origin
+const WS_PATH = import.meta.env.VITE_WS_SOCKET_PATH || '/socket.io'
 
 let socket: Socket | null = null
 
@@ -126,6 +127,7 @@ export function initWebSocket() {
   console.log('[WS] Connecting to', WS_URL)
 
   socket = io(WS_URL, {
+    path: WS_PATH,
     transports: ['websocket', 'polling'],
     reconnection: true,
     reconnectionAttempts: maxReconnectAttempts,
